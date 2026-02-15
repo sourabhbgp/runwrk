@@ -11,7 +11,7 @@ export async function setup() {
   const currentKey = env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
   const isRealKey = currentKey?.startsWith("sk-ant-");
 
-  if (isRealKey) {
+  if (currentKey && isRealKey) {
     const preview = currentKey.slice(0, 4) + "..." + currentKey.slice(-4);
     info(`Anthropic API key: ${dim(preview)}`);
     const keep = ask("Use this key? (Y/n)");

@@ -107,7 +107,7 @@ export async function fetchFeed(): Promise<{
 
   // 2. Timeline (followed accounts, filtered by configured topics/keywords)
   try {
-    const timeline = await getFollowedFeed(30);
+    const timeline = await getFollowedFeed();
     const lowerTopics = [...config.topics, ...config.keywords].map((t) => t.toLowerCase());
 
     for (const raw of timeline) {

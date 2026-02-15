@@ -44,11 +44,11 @@ export async function postTweet(
   config?: TwitterConfig
 ): Promise<string | undefined> {
   await delay(config);
-  const result = await getClient().tweet.post(text, {
+  return await getClient().tweet.post({
+    text,
     ...(options?.replyTo && { replyTo: options.replyTo }),
     ...(options?.quote && { quote: options.quote }),
   });
-  return result?.id;
 }
 
 /** Like a tweet by its ID */
@@ -76,7 +76,7 @@ export async function searchTweets(
 
 /** Get replies to a specific tweet */
 export async function getTweetReplies(tweetId: string, count: number = 20): Promise<any[]> {
-  const result = await getClient().tweet.replies(tweetId, count);
+  const result = await getClient().tweet.replies(tweetId);
   return result?.list ?? [];
 }
 
@@ -97,15 +97,21 @@ export async function getUserTimeline(userId: string, count: number = 20): Promi
 }
 
 /** Get the authenticated user's followed/home feed */
-export async function getFollowedFeed(count: number = 20): Promise<any[]> {
-  const result = await getClient().user.followed(count);
+export async function getFollowedFeed(): Promise<any[]> {
+  const result = await getClient().user.followed();
   return result?.list ?? [];
 }
 
-/** Get the authenticated user's notifications (mentions, replies, etc.) */
+/** Get the authenticated user's notifications (mentions, replies, etc.).
+ *  Collects up to `count` items from the async generator. */
 export async function getNotifications(count: number = 20): Promise<any[]> {
-  const result = await getClient().user.notifications(count);
-  return result?.list ?? [];
+  const notifications: any[] = [];
+  const generator = getClient().user.notifications();
+  for await (const notification of generator) {
+    notifications.push(notification);
+    if (notifications.length >= count) break;
+  }
+  return notifications;
 }
 
 /** Follow a user by their user ID */

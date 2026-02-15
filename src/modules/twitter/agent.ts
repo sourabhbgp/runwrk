@@ -1,16 +1,15 @@
 /**
  * agent.ts — Claude integration for tweet analysis and reply generation.
  *
- * Builds a system prompt with voice/style guidelines, learned skip preferences,
- * blocked accounts, and recent history. Provides functions to analyze tweets
- * (suggest reply/like/skip), craft replies, and compose original tweets.
+ * Provides functions to analyze tweets (suggest reply/like/skip), craft replies,
+ * and compose original tweets. System prompt logic lives in prompt.ts.
  */
 
 import Anthropic from "@anthropic-ai/sdk";
 import { createAnthropicClient } from "../auth";
 import { readEnv } from "../../common";
 import { readConfig } from "./config";
-import { getRecentHistory, getSkipPatterns, getBlockedAccounts } from "./memory";
+import { buildSystemPrompt } from "./prompt";
 import type { FeedItem } from "./feed";
 
 // --- Types ---
@@ -33,56 +32,6 @@ function getAnthropicClient(): Anthropic {
   const key = env.ANTHROPIC_API_KEY;
   if (!key) throw new Error("No Anthropic API key. Run `myteam setup` first.");
   return createAnthropicClient(key);
-}
-
-// --- System Prompt ---
-
-/** Build the system prompt that guides Claude's engagement behavior.
- *  Incorporates config (topics), recent history, learned skip patterns,
- *  and blocked accounts so Claude improves over time. */
-function buildSystemPrompt(): string {
-  const config = readConfig();
-  const history = getRecentHistory(8);
-  const topics = config.topics.length > 0 ? config.topics.join(", ") : "general tech";
-  const skipPatterns = getSkipPatterns(30);
-  const blocked = getBlockedAccounts();
-
-  // Build a "Learned Preferences" section only if there's data to show
-  let learnedPreferences = "";
-  if (skipPatterns || blocked.length > 0) {
-    learnedPreferences = "\n## Learned Preferences\n";
-    if (skipPatterns) {
-      learnedPreferences += `The user tends to skip these types of tweets:\n${skipPatterns}\n\n`;
-    }
-    if (blocked.length > 0) {
-      learnedPreferences += `Blocked accounts (never engage): ${blocked.map((a) => `@${a}`).join(", ")}\n`;
-    }
-    learnedPreferences += "\nSkip tweets matching these patterns proactively — don't wait for the user to skip them.";
-  }
-
-  return `You are managing a Twitter account. Your job is to engage authentically with tweets.
-
-## Voice & Style
-- Write in a natural, conversational tone — like a real person, not a brand
-- Be genuine and add value — share insights, ask thoughtful questions, or make relevant observations
-- Keep replies concise (under 280 chars) and avoid hashtags unless highly relevant
-- Match the energy of the conversation — casual for casual, technical for technical
-
-## Topics of Interest
-${topics}
-
-## Safety Rules
-- NEVER spam or self-promote aggressively
-- NEVER be rude, dismissive, or argumentative
-- NEVER engage with controversial political/social topics
-- If a tweet is controversial, inflammatory, or you're unsure, recommend "skip"
-- Prioritize quality over quantity — it's better to skip than post a generic reply
-${learnedPreferences}
-
-## Recent Engagement History
-${history}
-
-Avoid repeating similar replies. Keep engagement varied and authentic.`;
 }
 
 // --- Tweet Analysis ---
