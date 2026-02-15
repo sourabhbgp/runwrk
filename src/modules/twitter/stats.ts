@@ -1,12 +1,20 @@
+/**
+ * stats.ts — Display engagement analytics (the `myteam twitter stats` command).
+ *
+ * Reads from twitter-memory.json and shows today's activity, this week's totals,
+ * all-time totals, and recent replies — formatted for the terminal.
+ */
+
 import { bold, dim, cyan, green, yellow, divider, info } from "../../common";
 import { readMemory } from "./memory";
 
+/** Display a formatted breakdown of Twitter engagement stats across time periods */
 export async function twitterStats() {
   const mem = readMemory();
 
   console.log(`\n${bold(cyan("Twitter Engagement Stats"))}\n`);
 
-  // Today
+  // --- Today's Stats ---
   const today = new Date().toISOString().slice(0, 10);
   const todayStats = mem.dailyStats[today];
 
@@ -22,7 +30,7 @@ export async function twitterStats() {
     console.log(dim("  No activity today."));
   }
 
-  // This week
+  // --- This Week's Aggregate ---
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 7);
   const weekDays = Object.entries(mem.dailyStats).filter(([date]) => date >= weekAgo.toISOString().slice(0, 10));
@@ -46,7 +54,7 @@ export async function twitterStats() {
     console.log(`  Follows:   ${green(String(totals.follows))}`);
   }
 
-  // All time
+  // --- All-Time Aggregate ---
   const allDays = Object.entries(mem.dailyStats);
   if (allDays.length > 1) {
     const totals = { replies: 0, likes: 0, posts: 0, retweets: 0, follows: 0 };
@@ -67,7 +75,7 @@ export async function twitterStats() {
     console.log(`  Follows:   ${green(String(totals.follows))}`);
   }
 
-  // Recent replies
+  // --- Recent Replies Preview ---
   if (mem.repliedTo.length > 0) {
     const recent = mem.repliedTo.slice(-5);
     console.log(`\n${bold("Recent Replies")}`);
@@ -79,6 +87,7 @@ export async function twitterStats() {
     }
   }
 
+  // Show hint if no data at all
   if (allDays.length === 0 && mem.repliedTo.length === 0) {
     info("No engagement data yet. Run `myteam twitter` to start a session.");
   }

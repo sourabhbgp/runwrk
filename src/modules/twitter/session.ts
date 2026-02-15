@@ -1,3 +1,11 @@
+/**
+ * session.ts — Interactive engagement session (the main `myteam twitter` command).
+ *
+ * Fetches the feed, presents each tweet to the user with Claude's analysis,
+ * and provides an action menu: reply, like, quote, retweet, skip, block, post, or exit.
+ * Logs all actions (including skips and blocks) to memory for future learning.
+ */
+
 import { createInterface } from "readline";
 import {
   bold, dim, cyan, yellow, green, red,
@@ -8,17 +16,21 @@ import { readConfig } from "./config";
 import { fetchFeed, fetchThread, type FeedItem } from "./feed";
 import { analyzeTweet, craftReply, composeTweet } from "./agent";
 import {
-  logReply, logLike, logRetweet, logPost,
+  logReply, logLike, logRetweet, logPost, logSkip, blockAccount,
   getDailyCount,
 } from "./memory";
 import { runAuto } from "./auto";
 
+// --- Helpers ---
+
+/** Wrap readline.question in a promise for async/await usage */
 function prompt(rl: ReturnType<typeof createInterface>, q: string): Promise<string> {
   return new Promise((resolve) => {
     rl.question(q, (answer) => resolve(answer));
   });
 }
 
+/** Format a feed item for terminal display with type badge, stats, and engagement status */
 function formatTweet(item: FeedItem): string {
   const badge =
     item.type === "mention" ? yellow("[mention]") :
@@ -31,6 +43,7 @@ function formatTweet(item: FeedItem): string {
   return `${badge} ${bold(`@${item.tweet.username}`)} ${stats}${engaged}\n${item.tweet.text}`;
 }
 
+/** Print a summary of all actions taken during the session */
 function sessionSummary(actions: Record<string, number>): void {
   console.log(`\n${bold(cyan("Session Summary"))}`);
   divider();
@@ -46,7 +59,13 @@ function sessionSummary(actions: Record<string, number>): void {
   console.log();
 }
 
+// --- Main Session ---
+
+/** Run the interactive Twitter engagement session.
+ *  Validates credentials, fetches the feed, then loops through each tweet
+ *  presenting Claude's suggestion and the action menu. */
 export async function twitter(opts: { auto?: boolean } = {}) {
+  // --- Credential Validation ---
   const env = readEnv();
   const apiKey = env.TWITTER_API_KEY;
   if (!apiKey) {
@@ -64,7 +83,7 @@ export async function twitter(opts: { auto?: boolean } = {}) {
 
   console.log(`\n${bold(cyan("myteam twitter"))} ${dim("— engagement session")}\n`);
 
-  // Fetch feed
+  // --- Feed Loading ---
   const spin = spinner("Fetching feed...");
   const { items, counts } = await fetchFeed();
   spin.stop();
@@ -81,16 +100,17 @@ export async function twitter(opts: { auto?: boolean } = {}) {
     return;
   }
 
-  // Auto mode
+  // --- Auto Mode Handoff ---
   if (opts.auto) {
     await runAuto(items, config);
     return;
   }
 
-  // Interactive mode
+  // --- Interactive Loop ---
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const actions: Record<string, number> = { replies: 0, likes: 0, retweets: 0, posts: 0, skipped: 0 };
 
+  // Print summary on Ctrl+C / stream close
   rl.on("close", () => {
     sessionSummary(actions);
     process.exit(0);
@@ -101,12 +121,12 @@ export async function twitter(opts: { auto?: boolean } = {}) {
     console.log(formatTweet(item));
     console.log();
 
-    // Get thread context for mentions
+    // Fetch thread context for mentions so Claude has the full conversation
     if (item.type === "mention" && !item.thread) {
       item.thread = await fetchThread(item.tweet.id);
     }
 
-    // Claude's suggestion
+    // --- Claude Analysis ---
     const spin2 = spinner("Analyzing...");
     const analysis = await analyzeTweet(item);
     spin2.stop();
@@ -119,24 +139,37 @@ export async function twitter(opts: { auto?: boolean } = {}) {
     }
     console.log();
 
+    // --- Action Menu ---
     const choice = await prompt(
       rl,
-      `${cyan("?")} [${bold("r")}]eply [${bold("l")}]ike [${bold("q")}]uote [${bold("R")}]T [${bold("s")}]kip [${bold("p")}]ost original [${bold("x")}]exit: `
+      `${cyan("?")} [${bold("r")}]eply [${bold("l")}]ike [${bold("q")}]uote [${bold("R")}]T [${bold("s")}]kip [${bold("b")}]lock [${bold("p")}]ost original [${bold("x")}]exit: `
     );
 
     const c = choice.trim().toLowerCase();
 
+    // Exit the session
     if (c === "x") {
       break;
     }
 
+    // Skip — log the skip reason for learning, then move to next tweet
     if (c === "s" || c === "") {
+      logSkip(item.tweet.username, item.tweet.text, analysis.reason);
       actions.skipped++;
       continue;
     }
 
+    // Block — permanently block this account and skip
+    if (c === "b") {
+      blockAccount(item.tweet.username);
+      logSkip(item.tweet.username, item.tweet.text, "User blocked account");
+      actions.skipped++;
+      success(`Blocked @${item.tweet.username} — they won't appear in future sessions`);
+      continue;
+    }
+
+    // Like
     if (c === "l") {
-      // Check session limits
       if (actions.likes >= config.limits.maxLikesPerSession) {
         info(`Like limit reached (${config.limits.maxLikesPerSession}/session). Skipping.`);
         continue;
@@ -152,6 +185,7 @@ export async function twitter(opts: { auto?: boolean } = {}) {
       continue;
     }
 
+    // Retweet
     if (c === "rt" || c === "R") {
       try {
         await retweet(item.tweet.id, config);
@@ -164,12 +198,14 @@ export async function twitter(opts: { auto?: boolean } = {}) {
       continue;
     }
 
+    // Reply — use Claude's draft if available, otherwise generate one
     if (c === "r") {
       if (actions.replies >= config.limits.maxRepliesPerSession) {
         info(`Reply limit reached (${config.limits.maxRepliesPerSession}/session). Skipping.`);
         continue;
       }
 
+      // Reuse Claude's draft if analysis already suggested a reply
       let draft = analysis.action === "reply" && analysis.draft ? analysis.draft : null;
       if (!draft) {
         const spin3 = spinner("Crafting reply...");
@@ -203,6 +239,7 @@ export async function twitter(opts: { auto?: boolean } = {}) {
       continue;
     }
 
+    // Quote tweet
     if (c === "q") {
       if (actions.replies >= config.limits.maxRepliesPerSession) {
         info(`Reply limit reached (${config.limits.maxRepliesPerSession}/session). Skipping.`);
@@ -239,6 +276,7 @@ export async function twitter(opts: { auto?: boolean } = {}) {
       continue;
     }
 
+    // Post original tweet (unrelated to current feed item)
     if (c === "p") {
       if (getDailyCount("posts") >= config.limits.maxPostsPerDay) {
         info(`Daily post limit reached (${config.limits.maxPostsPerDay}/day). Skipping.`);
@@ -275,6 +313,7 @@ export async function twitter(opts: { auto?: boolean } = {}) {
       continue;
     }
 
+    // Unrecognized input — treat as skip
     actions.skipped++;
   }
 
