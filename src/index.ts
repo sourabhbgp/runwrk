@@ -10,6 +10,10 @@ ${bold(cyan("myteam"))} ${dim(`v${VERSION}`)}
 ${bold("Usage:")}
   myteam setup                    Configure API keys
   myteam chat                     Start a chat session
+  myteam twitter                  Start Twitter engagement session
+  myteam twitter setup            Configure Twitter credentials
+  myteam twitter stats            View engagement analytics
+  myteam twitter --auto           Run autonomous engagement session
   myteam --help                   Show this help
   myteam --version                Show version
 `;
@@ -38,6 +42,21 @@ async function main() {
     case "chat": {
       const { chat } = await import("./modules/chat");
       await chat();
+      break;
+    }
+    case "twitter": {
+      const subcommand = args[1];
+      if (subcommand === "setup") {
+        const { twitterSetup } = await import("./modules/twitter");
+        await twitterSetup();
+      } else if (subcommand === "stats") {
+        const { twitterStats } = await import("./modules/twitter");
+        await twitterStats();
+      } else {
+        const { twitter } = await import("./modules/twitter");
+        const auto = args.includes("--auto");
+        await twitter({ auto });
+      }
       break;
     }
     default: {
