@@ -1,4 +1,5 @@
 export { readEnv, writeEnv, normalizeKeyInput } from "./env";
+export { withTimeout, TimeoutError } from "./timeout";
 export {
   bold,
   dim,

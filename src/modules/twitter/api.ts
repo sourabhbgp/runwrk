@@ -7,6 +7,7 @@
 
 import { Rettiwt } from "rettiwt-api";
 import { getDelay, type TwitterConfig } from "./config";
+import { withTimeout } from "../../common";
 
 // --- Client Singleton ---
 
@@ -24,6 +25,11 @@ export function getClient(): Rettiwt {
   if (!client) throw new Error("Twitter client not initialized. Run createTwitterClient first.");
   return client;
 }
+
+// --- Timeout ---
+
+/** Maximum time (ms) to wait for any single API read operation before aborting */
+const API_TIMEOUT_MS = 15_000;
 
 // --- Rate Limiting ---
 
@@ -70,41 +76,60 @@ export async function searchTweets(
   query: string | Record<string, any>,
   count: number = 20
 ): Promise<any[]> {
-  const result = await getClient().tweet.search(query as any, count);
+  const result = await withTimeout(
+    getClient().tweet.search(query as any, count),
+    API_TIMEOUT_MS,
+    "searchTweets"
+  );
   return result?.list ?? [];
 }
 
 /** Get replies to a specific tweet */
 export async function getTweetReplies(tweetId: string, count: number = 20): Promise<any[]> {
-  const result = await getClient().tweet.replies(tweetId);
+  const result = await withTimeout(
+    getClient().tweet.replies(tweetId),
+    API_TIMEOUT_MS,
+    "getTweetReplies"
+  );
   return result?.list ?? [];
 }
 
 /** Get full details for a single tweet by ID */
 export async function getTweetDetails(tweetId: string): Promise<any> {
-  return await getClient().tweet.details(tweetId);
+  return await withTimeout(getClient().tweet.details(tweetId), API_TIMEOUT_MS, "getTweetDetails");
 }
 
 /** Get user profile details by username */
 export async function getUserDetails(username: string): Promise<any> {
-  return await getClient().user.details(username);
+  return await withTimeout(getClient().user.details(username), API_TIMEOUT_MS, "getUserDetails");
 }
 
 /** Get a user's recent tweets by their user ID */
 export async function getUserTimeline(userId: string, count: number = 20): Promise<any[]> {
-  const result = await getClient().user.timeline(userId, count);
+  const result = await withTimeout(
+    getClient().user.timeline(userId, count),
+    API_TIMEOUT_MS,
+    "getUserTimeline"
+  );
   return result?.list ?? [];
 }
 
 /** Get the authenticated user's followed/home feed */
 export async function getFollowedFeed(): Promise<any[]> {
-  const result = await getClient().user.followed();
+  const result = await withTimeout(getClient().user.followed(), API_TIMEOUT_MS, "getFollowedFeed");
   return result?.list ?? [];
 }
 
 /** Get the authenticated user's notifications (mentions, replies, etc.).
- *  Collects up to `count` items from the async generator. */
+ *  Wraps the async generator in a timeout to prevent indefinite hangs
+ *  when fewer than `count` notifications exist. */
 export async function getNotifications(count: number = 20): Promise<any[]> {
+  return await withTimeout(collectNotifications(count), API_TIMEOUT_MS, "getNotifications");
+}
+
+/** Consume the notifications async generator, collecting up to `count` items.
+ *  Separated from getNotifications so the entire consumption can be timeout-wrapped. */
+async function collectNotifications(count: number): Promise<any[]> {
   const notifications: any[] = [];
   const generator = getClient().user.notifications();
   for await (const notification of generator) {
