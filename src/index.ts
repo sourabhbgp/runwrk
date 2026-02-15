@@ -9,6 +9,7 @@ ${bold(cyan("myteam"))} ${dim(`v${VERSION}`)}
 
 ${bold("Usage:")}
   myteam setup                    Configure API keys
+  myteam chat                     Start a chat session
   myteam --help                   Show this help
   myteam --version                Show version
 `;
@@ -32,6 +33,11 @@ async function main() {
     case "setup": {
       const { setup } = await import("./modules/auth");
       await setup();
+      break;
+    }
+    case "chat": {
+      const { chat } = await import("./modules/chat");
+      await chat();
       break;
     }
     default: {
