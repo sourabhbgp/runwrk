@@ -36,6 +36,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # docs
 docs
 
+# myteam runtime data
+.myteam
+
 # SQLite database
 *.db
 *.db-wal
