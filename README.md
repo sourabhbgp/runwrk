@@ -1,6 +1,6 @@
 # myteam
 
-A task-focused AI assistant CLI powered by Claude. Lightweight, streaming chat with persistent memory and configurable system prompts.
+A task-focused AI assistant CLI powered by Claude. Lightweight, streaming chat with persistent memory, configurable system prompts, and autonomous Twitter engagement.
 
 ## Prerequisites
 
@@ -100,37 +100,89 @@ EOF
 
 The custom system prompt fully replaces the default. Persistent memories are still appended to whatever system prompt is active.
 
+### Twitter Engagement
+
+Run autonomous Twitter engagement powered by Claude:
+
+```bash
+myteam twitter
+```
+
+By default this runs in **auto mode** — the agent fetches your mentions, timeline, and discovery feeds, analyzes each tweet, crafts contextual replies, and posts them automatically.
+
+To review each reply before it's posted, use **manual mode**:
+
+```bash
+myteam twitter --manual
+```
+
+In manual mode you approve, edit, or skip each suggested reply interactively.
+
+#### Twitter Subcommands
+
+| Command | Description |
+|---|---|
+| `myteam twitter setup` | Configure your Twitter credentials (rettiwt API key) and engagement preferences |
+| `myteam twitter stats` | View engagement analytics — reply counts, response rates, and trends |
+| `myteam twitter feedback` | Manage persistent directives that shape how the agent writes replies |
+
 ## Project Structure
 
 ```
 src/
-├── index.ts                  # CLI entry point & command router
-├── common/                   # Shared utilities
+├── index.ts                  # CLI entry point (runs the Commander program)
+├── cli/                      # Command registration (Commander.js)
+│   ├── index.ts              # Builds the program, imports all register.*.ts files
+│   ├── register.setup.ts     # `myteam setup` command
+│   ├── register.chat.ts      # `myteam chat` command
+│   └── register.twitter.ts   # `myteam twitter` + subcommands (setup, stats, feedback)
+├── common/                   # Shared utilities (no feature imports)
 │   ├── ui.ts                 # Terminal formatting (bold, dim, spinner, etc.)
 │   ├── env.ts                # .env.local read/write helpers
+│   ├── timeout.ts            # withTimeout helper & TimeoutError
 │   └── index.ts              # Barrel exports
 └── modules/
-    ├── auth/                 # Authentication module
+    ├── auth/                 # LLM authentication module
     │   ├── anthropic.ts      # Client factory (OAuth + API key support)
     │   ├── setup.ts          # Interactive setup command
     │   └── index.ts          # Public API
-    └── chat/                 # Chat module
-        ├── chat.ts           # Main REPL loop with streaming
-        ├── session.ts        # In-memory message history & system prompt
-        ├── memory.ts         # Persistent memory (.myteam/MEMORY.md)
-        ├── commands.ts       # Slash command parser & handlers
+    ├── chat/                 # Task-focused chat module
+    │   ├── chat.ts           # Main REPL loop with streaming
+    │   ├── session.ts        # In-memory message history & system prompt
+    │   ├── commands.ts       # Slash command parser & handlers
+    │   ├── memory.ts         # Persistent memory (.myteam/MEMORY.md)
+    │   └── index.ts          # Public API
+    └── twitter/              # Twitter engagement module
+        ├── api.ts            # Rettiwt wrapper — all Twitter operations
+        ├── feed.ts           # Fetch & organize: mentions, timeline, discovery
+        ├── agent.ts          # Claude integration — analyze tweets, craft replies
+        ├── prompt.ts         # System prompt for the Twitter agent
+        ├── session.ts        # Interactive approve/edit/skip loop
+        ├── auto.ts           # Autonomous mode
+        ├── config.ts         # Read/write .myteam/twitter-config.json
+        ├── stats.ts          # Engagement analytics display
+        ├── memory.ts         # Engagement history (.myteam/twitter-memory.json)
+        ├── feedback.ts       # Persistent agent directives manager
+        ├── setup.ts          # Credential setup (rettiwt API key)
         └── index.ts          # Public API
 
 .myteam/                      # Runtime data (gitignored)
 ├── MEMORY.md                 # Persistent memories
-└── SYSTEM.md                 # Custom system prompt (optional)
+├── SYSTEM.md                 # Custom system prompt (optional)
+├── twitter-config.json       # Twitter engagement preferences
+└── twitter-memory.json       # Engagement history
 ```
 
 ## All Commands
 
 ```
-myteam setup       Configure your Anthropic API key
-myteam chat        Start an interactive chat session
-myteam --help      Show help
-myteam --version   Show version
+myteam setup                 Configure your Anthropic API key
+myteam chat                  Start an interactive chat session
+myteam twitter               Run autonomous Twitter engagement (default: auto)
+myteam twitter --manual      Run interactive Twitter engagement
+myteam twitter setup         Configure Twitter credentials and preferences
+myteam twitter stats         View engagement analytics
+myteam twitter feedback      Manage agent directives
+myteam --help                Show help
+myteam --version             Show version
 ```
