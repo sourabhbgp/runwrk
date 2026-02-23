@@ -1,11 +1,13 @@
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
 
-const ENV_PATH = join(process.cwd(), ".env.local");
+/** Get the .env.local path (lazy for testability with process.chdir) */
+function getEnvPath(): string { return join(process.cwd(), ".env.local"); }
 
 export function readEnv(): Record<string, string> {
-  if (!existsSync(ENV_PATH)) return {};
-  const content = readFileSync(ENV_PATH, "utf-8");
+  const envPath = getEnvPath();
+  if (!existsSync(envPath)) return {};
+  const content = readFileSync(envPath, "utf-8");
   const env: Record<string, string> = {};
   for (const line of content.split("\n")) {
     const trimmed = line.trim();
@@ -20,7 +22,7 @@ export function readEnv(): Record<string, string> {
 
 export function writeEnv(env: Record<string, string>) {
   const lines = Object.entries(env).map(([k, v]) => `${k}=${v}`);
-  writeFileSync(ENV_PATH, lines.join("\n") + "\n");
+  writeFileSync(getEnvPath(), lines.join("\n") + "\n");
 }
 
 export function normalizeKeyInput(raw: string): string {

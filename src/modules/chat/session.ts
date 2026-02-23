@@ -2,7 +2,8 @@ import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import { getMemoryBlock } from "./memory";
 
-const SYSTEM_PROMPT_PATH = join(process.cwd(), ".myteam", "SYSTEM.md");
+/** Get the custom system prompt path (lazy for testability with process.chdir) */
+function getSystemPromptPath(): string { return join(process.cwd(), ".myteam", "SYSTEM.md"); }
 
 const DEFAULT_SYSTEM_PROMPT = `You are a focused task assistant. Be concise and direct.
 Help the user with their current task. Avoid unnecessary preamble.`;
@@ -25,8 +26,8 @@ export function reset() {
 
 export function getSystemPrompt(): string {
   let base: string;
-  if (existsSync(SYSTEM_PROMPT_PATH)) {
-    base = readFileSync(SYSTEM_PROMPT_PATH, "utf-8").trim();
+  if (existsSync(getSystemPromptPath())) {
+    base = readFileSync(getSystemPromptPath(), "utf-8").trim();
   } else {
     base = DEFAULT_SYSTEM_PROMPT;
   }

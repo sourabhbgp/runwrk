@@ -10,15 +10,20 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rmSync
 import { join } from "path";
 import type { WorkflowConfig, GlobalSafetyState } from "./workflow.types";
 
-// --- Path Helpers ---
+// --- Path Helpers (lazy — evaluated on each call for testability) ---
 
-const BASE_DIR = join(process.cwd(), ".myteam");
-const WORKFLOWS_DIR = join(BASE_DIR, "workflows");
-const GLOBAL_SAFETY_PATH = join(BASE_DIR, "twitter-global.json");
+/** Get the base .myteam directory path */
+function getBaseDir(): string { return join(process.cwd(), ".myteam"); }
+
+/** Get the workflows root directory path */
+function getWorkflowsDir(): string { return join(getBaseDir(), "workflows"); }
+
+/** Get the global safety state file path */
+function getGlobalSafetyPath(): string { return join(getBaseDir(), "twitter-global.json"); }
 
 /** Get the directory path for a named workflow */
 export function workflowDir(name: string): string {
-  return join(WORKFLOWS_DIR, name);
+  return join(getWorkflowsDir(), name);
 }
 
 /** Get the workflow.json path for a named workflow */
@@ -33,15 +38,17 @@ export function workflowMemoryPath(name: string): string {
 
 /** Ensure the workflows root directory exists */
 function ensureWorkflowsDir(): void {
-  if (!existsSync(WORKFLOWS_DIR)) mkdirSync(WORKFLOWS_DIR, { recursive: true });
+  const dir = getWorkflowsDir();
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 }
 
 // --- Workflow CRUD ---
 
 /** List all workflow names by scanning the workflows directory */
 export function listWorkflows(): string[] {
-  if (!existsSync(WORKFLOWS_DIR)) return [];
-  return readdirSync(WORKFLOWS_DIR, { withFileTypes: true })
+  const dir = getWorkflowsDir();
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true })
     .filter((d) => d.isDirectory())
     .map((d) => d.name)
     .sort();
@@ -85,9 +92,10 @@ const EMPTY_SAFETY: GlobalSafetyState = {
 
 /** Read global safety state from disk */
 export function readGlobalSafety(): GlobalSafetyState {
-  if (!existsSync(GLOBAL_SAFETY_PATH)) return { ...EMPTY_SAFETY, blockedAccounts: [], dailyPostCounts: {} };
+  const path = getGlobalSafetyPath();
+  if (!existsSync(path)) return { ...EMPTY_SAFETY, blockedAccounts: [], dailyPostCounts: {} };
   try {
-    const raw = readFileSync(GLOBAL_SAFETY_PATH, "utf-8");
+    const raw = readFileSync(path, "utf-8");
     return { ...EMPTY_SAFETY, ...JSON.parse(raw) };
   } catch {
     return { ...EMPTY_SAFETY, blockedAccounts: [], dailyPostCounts: {} };
@@ -96,8 +104,9 @@ export function readGlobalSafety(): GlobalSafetyState {
 
 /** Write global safety state to disk */
 export function writeGlobalSafety(state: GlobalSafetyState): void {
-  if (!existsSync(BASE_DIR)) mkdirSync(BASE_DIR, { recursive: true });
-  writeFileSync(GLOBAL_SAFETY_PATH, JSON.stringify(state, null, 2) + "\n");
+  const baseDir = getBaseDir();
+  if (!existsSync(baseDir)) mkdirSync(baseDir, { recursive: true });
+  writeFileSync(getGlobalSafetyPath(), JSON.stringify(state, null, 2) + "\n");
 }
 
 /** Add a username to the global blocklist (shared across all workflows) */

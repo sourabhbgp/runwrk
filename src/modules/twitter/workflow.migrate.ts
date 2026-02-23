@@ -18,20 +18,25 @@ import { createCustomWorkflow } from "./workflow.templates";
 import { writeFileSync } from "fs";
 import { info, dim } from "../../common";
 
-const BASE_DIR = join(process.cwd(), ".myteam");
-const WORKFLOWS_DIR = join(BASE_DIR, "workflows");
-const OLD_MEMORY_PATH = join(BASE_DIR, "twitter-memory.json");
-const OLD_CONFIG_PATH = join(BASE_DIR, "twitter-config.json");
+// Lazy path getters for testability with process.chdir
+function getBaseDir(): string { return join(process.cwd(), ".myteam"); }
+function getWorkflowsDir(): string { return join(getBaseDir(), "workflows"); }
+function getOldMemoryPath(): string { return join(getBaseDir(), "twitter-memory.json"); }
+function getOldConfigPath(): string { return join(getBaseDir(), "twitter-config.json"); }
 
 /** Ensure the old flat structure has been migrated to workflow directories.
  *  Safe to call multiple times — no-ops if already migrated. */
 export function ensureMigrated(): void {
+  const workflowsDir = getWorkflowsDir();
+  const oldMemoryPath = getOldMemoryPath();
+  const oldConfigPath = getOldConfigPath();
+
   // Already migrated — workflows directory exists
-  if (existsSync(WORKFLOWS_DIR)) return;
+  if (existsSync(workflowsDir)) return;
 
   // No old memory file — fresh install, just create the empty workflows dir
-  if (!existsSync(OLD_MEMORY_PATH)) {
-    mkdirSync(WORKFLOWS_DIR, { recursive: true });
+  if (!existsSync(oldMemoryPath)) {
+    mkdirSync(workflowsDir, { recursive: true });
     return;
   }
 
@@ -40,15 +45,15 @@ export function ensureMigrated(): void {
   // --- Read old data ---
   let oldMemory: Record<string, unknown> = {};
   try {
-    oldMemory = JSON.parse(readFileSync(OLD_MEMORY_PATH, "utf-8"));
+    oldMemory = JSON.parse(readFileSync(oldMemoryPath, "utf-8"));
   } catch {
     // Corrupt file — proceed with empty data
   }
 
   let oldConfig: Record<string, unknown> = {};
   try {
-    if (existsSync(OLD_CONFIG_PATH)) {
-      oldConfig = JSON.parse(readFileSync(OLD_CONFIG_PATH, "utf-8"));
+    if (existsSync(oldConfigPath)) {
+      oldConfig = JSON.parse(readFileSync(oldConfigPath, "utf-8"));
     }
   } catch {
     // Corrupt file — proceed with empty data
@@ -102,7 +107,7 @@ export function ensureMigrated(): void {
 
   // --- Backup old files (preserve, never delete) ---
   try {
-    renameSync(OLD_MEMORY_PATH, OLD_MEMORY_PATH + ".backup");
+    renameSync(oldMemoryPath, oldMemoryPath + ".backup");
   } catch {
     // Ignore rename failures (permissions, etc.)
   }

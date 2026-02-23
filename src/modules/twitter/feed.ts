@@ -36,8 +36,9 @@ export type FeedItem = {
 
 // --- Tweet Normalization ---
 
-/** Convert raw rettiwt API response into a consistent tweet shape, or null if invalid */
-function normalizeTweet(raw: any): FeedItem["tweet"] | null {
+/** Convert raw rettiwt API response into a consistent tweet shape, or null if invalid.
+ *  @internal Exported for unit testing only */
+export function normalizeTweet(raw: any): FeedItem["tweet"] | null {
   if (!raw || !raw.id) return null;
   return {
     id: raw.id,
@@ -64,8 +65,9 @@ const SPAM_KEYWORDS = [
 ];
 
 /** Check if a tweet is spam using blocked accounts, keyword heuristics,
- *  and engagement ratio analysis. Spam tweets are silently dropped from the feed. */
-function isSpam(tweet: FeedItem["tweet"]): boolean {
+ *  and engagement ratio analysis. Spam tweets are silently dropped from the feed.
+ *  @internal Exported for unit testing only */
+export function isSpam(tweet: FeedItem["tweet"]): boolean {
   // Permanently blocked accounts always get filtered (reads from global safety)
   if (isBlocked(tweet.username)) return true;
 
@@ -83,8 +85,9 @@ function isSpam(tweet: FeedItem["tweet"]): boolean {
 // --- Workflow Feed Filters ---
 
 /** Apply workflow-specific filters to a list of feed items.
- *  Filters by minFollowers, requireHashtags, and requireKeywords. */
-function applyWorkflowFilters(items: FeedItem[], workflow?: WorkflowConfig): FeedItem[] {
+ *  Filters by minFollowers, requireHashtags, and requireKeywords.
+ *  @internal Exported for unit testing only */
+export function applyWorkflowFilters(items: FeedItem[], workflow?: WorkflowConfig): FeedItem[] {
   if (!workflow?.feedFilters) return items;
 
   const filters = workflow.feedFilters;

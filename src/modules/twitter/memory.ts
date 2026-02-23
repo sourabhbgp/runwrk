@@ -10,8 +10,10 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { workflowMemoryPath, globalBlockAccount, isGloballyBlocked, readGlobalSafety } from "./workflow";
 
-// --- Legacy path (used only when no workflow specified) ---
-const LEGACY_MEMORY_PATH = join(process.cwd(), ".myteam", "twitter-memory.json");
+// --- Legacy path (lazy for testability with process.chdir) ---
+
+/** Get the legacy memory path used when no workflow is specified */
+function getLegacyMemoryPath(): string { return join(process.cwd(), ".myteam", "twitter-memory.json"); }
 
 // --- Types ---
 
@@ -71,7 +73,7 @@ const EMPTY_MEMORY: TwitterMemory = {
 
 /** Resolve the memory file path — workflow-scoped when name provided, legacy otherwise */
 function getMemoryPath(workflowName?: string): string {
-  return workflowName ? workflowMemoryPath(workflowName) : LEGACY_MEMORY_PATH;
+  return workflowName ? workflowMemoryPath(workflowName) : getLegacyMemoryPath();
 }
 
 // --- Persistence Helpers ---

@@ -10,7 +10,8 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import type { WorkflowConfig } from "./workflow.types";
 
-const CONFIG_PATH = join(process.cwd(), ".myteam", "twitter-config.json");
+/** Get the config file path (lazy for testability with process.chdir) */
+function getConfigPath(): string { return join(process.cwd(), ".myteam", "twitter-config.json"); }
 
 // --- Types ---
 
@@ -45,15 +46,16 @@ const DEFAULT_CONFIG: TwitterConfig = {
 
 /** Ensure the .myteam/ directory exists before writing */
 function ensureDir() {
-  const dir = dirname(CONFIG_PATH);
+  const dir = dirname(getConfigPath());
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 }
 
 /** Load config from disk, merging with defaults for any missing fields */
 export function readConfig(): TwitterConfig {
-  if (!existsSync(CONFIG_PATH)) return { ...DEFAULT_CONFIG };
+  const path = getConfigPath();
+  if (!existsSync(path)) return { ...DEFAULT_CONFIG };
   try {
-    const raw = readFileSync(CONFIG_PATH, "utf-8");
+    const raw = readFileSync(path, "utf-8");
     return { ...DEFAULT_CONFIG, ...JSON.parse(raw) };
   } catch {
     return { ...DEFAULT_CONFIG };
@@ -63,7 +65,7 @@ export function readConfig(): TwitterConfig {
 /** Save the full config to disk as pretty-printed JSON */
 export function writeConfig(config: TwitterConfig): void {
   ensureDir();
-  writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
+  writeFileSync(getConfigPath(), JSON.stringify(config, null, 2) + "\n");
 }
 
 /** Get a random delay (in ms) within the configured range for rate limiting */
