@@ -64,7 +64,7 @@ function sessionSummary(actions: Record<string, number>): void {
 /** Run the interactive Twitter engagement session.
  *  Validates credentials, fetches the feed, then loops through each tweet
  *  presenting Claude's suggestion and the action menu. */
-export async function twitter(opts: { auto?: boolean } = {}) {
+export async function twitter(opts: { manual?: boolean } = {}) {
   // --- Credential Validation ---
   const env = readEnv();
   const apiKey = env.TWITTER_API_KEY;
@@ -100,13 +100,13 @@ export async function twitter(opts: { auto?: boolean } = {}) {
     return;
   }
 
-  // --- Auto Mode Handoff ---
-  if (opts.auto) {
+  // --- Mode Selection: auto (default) vs manual ---
+  if (!opts.manual) {
     await runAuto(items, config);
     return;
   }
 
-  // --- Interactive Loop ---
+  // --- Interactive Loop (--manual) ---
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const actions: Record<string, number> = { replies: 0, likes: 0, retweets: 0, posts: 0, skipped: 0 };
 

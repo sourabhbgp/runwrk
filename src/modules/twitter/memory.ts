@@ -49,6 +49,7 @@ export type TwitterMemory = {
   dailyStats: Record<string, DayStats>;
   skipped: SkipEntry[];
   blockedAccounts: string[];
+  feedback: string[];
 };
 
 /** Default empty state — used when no memory file exists or on parse failure */
@@ -61,6 +62,7 @@ const EMPTY_MEMORY: TwitterMemory = {
   dailyStats: {},
   skipped: [],
   blockedAccounts: [],
+  feedback: [],
 };
 
 // --- Persistence Helpers ---
@@ -229,4 +231,28 @@ export function getSkipPatterns(n: number = 30): string {
 /** Return the full list of blocked account usernames */
 export function getBlockedAccounts(): string[] {
   return readMemory().blockedAccounts;
+}
+
+// --- User Feedback / Directives ---
+
+/** Add a timestamped feedback directive that persists across sessions */
+export function addFeedback(text: string): void {
+  const mem = readMemory();
+  const entry = `[${new Date().toISOString().slice(0, 10)}] ${text}`;
+  mem.feedback.push(entry);
+  saveMemory(mem);
+}
+
+/** Return all stored feedback directives */
+export function getFeedback(): string[] {
+  return readMemory().feedback;
+}
+
+/** Remove a specific feedback entry by index */
+export function removeFeedback(index: number): void {
+  const mem = readMemory();
+  if (index >= 0 && index < mem.feedback.length) {
+    mem.feedback.splice(index, 1);
+    saveMemory(mem);
+  }
 }

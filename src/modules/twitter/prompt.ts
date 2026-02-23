@@ -7,7 +7,7 @@
  */
 
 import { readConfig } from "./config";
-import { getRecentHistory, getSkipPatterns, getBlockedAccounts } from "./memory";
+import { getRecentHistory, getSkipPatterns, getBlockedAccounts, getFeedback } from "./memory";
 
 // --- System Prompt ---
 
@@ -20,6 +20,15 @@ export function buildSystemPrompt(): string {
   const topics = config.topics.length > 0 ? config.topics.join(", ") : "general tech";
   const skipPatterns = getSkipPatterns(30);
   const blocked = getBlockedAccounts();
+  const feedback = getFeedback();
+
+  // Build a "User Directives" section only if there are feedback entries
+  let userDirectives = "";
+  if (feedback.length > 0) {
+    userDirectives = "\n## User Directives\n";
+    userDirectives += feedback.map((entry) => `- ${entry}`).join("\n");
+    userDirectives += "\n\nFollow these directives strictly — they reflect the user's explicit preferences.";
+  }
 
   // Build a "Learned Preferences" section only if there's data to show
   let learnedPreferences = "";
@@ -51,7 +60,7 @@ ${topics}
 - NEVER engage with controversial political/social topics
 - If a tweet is controversial, inflammatory, or you're unsure, recommend "skip"
 - Prioritize quality over quantity — it's better to skip than post a generic reply
-${learnedPreferences}
+${userDirectives}${learnedPreferences}
 
 ## Recent Engagement History
 ${history}
