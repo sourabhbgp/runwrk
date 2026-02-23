@@ -7,7 +7,7 @@ src/
 │   ├── index.ts              # Builds the program, imports all register.*.ts files
 │   ├── register.setup.ts     # `myteam setup` command
 │   ├── register.chat.ts      # `myteam chat` command
-│   └── register.twitter.ts   # `myteam twitter` + subcommands (setup, stats, feedback)
+│   └── register.twitter.ts   # `myteam twitter` + subcommands (setup, stats, feedback, workflow)
 ├── common/                   # Shared utilities (no feature imports)
 │   ├── ui.ts                 # Terminal formatting (bold, dim, spinner, etc.)
 │   ├── env.ts                # .env.local read/write helpers
@@ -26,17 +26,22 @@ src/
     │   └── index.ts          # Public API: { chat }
     └── twitter/              # Twitter engagement module
         ├── api.ts            # Rettiwt wrapper — all Twitter operations
-        ├── feed.ts           # Fetch & organize: mentions, timeline, discovery
-        ├── agent.ts          # Claude integration — analyze tweets, craft replies
-        ├── prompt.ts         # System prompt for the Twitter agent
-        ├── session.ts        # Interactive approve/edit/skip loop
-        ├── auto.ts           # Autonomous mode (--auto flag)
-        ├── config.ts         # Read/write .myteam/twitter-config.json
-        ├── stats.ts          # Engagement analytics display
-        ├── memory.ts         # Engagement history (.myteam/twitter-memory.json)
-        ├── feedback.ts       # Persistent agent directives manager
+        ├── feed.ts           # Fetch & organize: mentions, timeline, discovery (workflow-aware)
+        ├── agent.ts          # Claude integration — analyze tweets, craft replies (workflow-aware)
+        ├── prompt.ts         # System prompt builder (injects workflow strategy + action bias)
+        ├── session.ts        # Interactive approve/edit/skip loop (requires workflow)
+        ├── auto.ts           # Autonomous mode (workflow-aware)
+        ├── config.ts         # Read/write .myteam/twitter-config.json + mergedLimits helper
+        ├── stats.ts          # Engagement analytics (per-workflow or cross-workflow summary)
+        ├── memory.ts         # Engagement history (workflow-scoped paths, global safety delegation)
+        ├── feedback.ts       # Persistent agent directives (per-workflow)
         ├── setup.ts          # Credential setup (rettiwt API key)
-        └── index.ts          # Public API: { twitter, twitterSetup, twitterStats, twitterFeedback }
+        ├── workflow.types.ts  # Shared types: WorkflowConfig, GlobalSafetyState, FeedFilters, etc.
+        ├── workflow.ts        # Workflow CRUD + global safety state persistence
+        ├── workflow.templates.ts # Template factories: follower-growth, hashtag-niche, custom
+        ├── workflow.migrate.ts   # Auto-migration from legacy flat structure to workflows/
+        ├── workflow.commands.ts  # Interactive create/list/edit/delete commands
+        └── index.ts          # Public API: { twitter, twitterSetup, twitterStats, twitterFeedback, workflowCreate, workflowList, workflowEdit, workflowDelete }
 ```
 
 # Architecture Rules
@@ -48,6 +53,54 @@ src/
 - **`src/index.ts`** is the CLI entry point. It only builds and runs the Commander program from `src/cli/`.
 - **`src/cli/`** manages all CLI commands via Commander.js. Each command lives in its own `register.*.ts` file and is wired up in `src/cli/index.ts`.
 - **DRY** — before writing new code, check `common/` and existing modules for reusable logic. Extract repeated patterns into `common/` rather than duplicating across modules.
+
+# Twitter Workflow System
+
+Workflows are **goal-driven engagement campaigns** with isolated memory, strategy prompts, feed filtering, and action biases. Each workflow runs independently while sharing global safety state.
+
+## Storage Layout
+
+```
+.myteam/
+├── twitter-config.json              ← global (API setup, default limits) — unchanged
+├── twitter-global.json              ← shared safety state (blocked accounts, daily post counts)
+└── workflows/                       ← per-workflow directories
+    ├── default/                     ← auto-migrated from legacy flat data
+    │   ├── workflow.json            ← WorkflowConfig (strategy, filters, limits, etc.)
+    │   └── memory.json             ← engagement history (replies, likes, skips, feedback)
+    └── <user-created>/
+        ├── workflow.json
+        └── memory.json
+```
+
+## Key Concepts
+
+- **Isolation**: Each workflow has its own `memory.json` — engagement history, skip patterns, and feedback directives never cross-contaminate.
+- **Global safety**: Blocked accounts and daily post counts are shared across all workflows via `twitter-global.json`.
+- **Templates**: Two built-in templates (`follower-growth`, `hashtag-niche`) plus `custom`. Factories in `workflow.templates.ts`.
+- **Auto-migration**: `ensureMigrated()` in `workflow.migrate.ts` runs at the top of any workflow-aware command. Moves legacy `twitter-memory.json` into `workflows/default/`. Old files renamed to `.backup`.
+- **Workflow-aware functions**: All memory, prompt, feed, and agent functions accept optional `workflowName?: string` and/or `workflow?: WorkflowConfig` parameters. Without them, they fall back to legacy behavior.
+
+## CLI Usage
+
+```
+myteam twitter -w <name>              # Run workflow (auto mode)
+myteam twitter -w <name> --manual     # Run workflow (interactive)
+myteam twitter workflow create        # Interactive guided setup
+myteam twitter workflow list          # List all workflows
+myteam twitter workflow edit -w <n>   # Edit workflow config
+myteam twitter workflow delete -w <n> # Delete workflow + history
+myteam twitter stats                  # Summary across all workflows
+myteam twitter stats -w <name>        # Detailed stats for one workflow
+myteam twitter feedback -w <name>     # Manage per-workflow directives
+```
+
+## Adding a New Workflow Template
+
+1. Add a factory function in `src/modules/twitter/workflow.templates.ts` (follow `createFollowerGrowthWorkflow` pattern).
+2. Add the template key to the `WorkflowTemplate` union in `workflow.types.ts`.
+3. Register it in the `TEMPLATES` map in `workflow.templates.ts`.
+4. The interactive `workflowCreate()` picker will automatically include it.
 
 # Adding a New Module
 
