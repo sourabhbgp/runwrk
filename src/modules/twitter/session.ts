@@ -4,6 +4,8 @@
  * Fetches the feed, presents each tweet to the user with Claude's analysis,
  * and provides an action menu: reply, like, quote, retweet, skip, block, post, or exit.
  * Logs all actions (including skips and blocks) to memory for future learning.
+ * Requires a workflow name — loads the workflow config and passes it through
+ * to feed, agent, and memory for isolated, goal-driven engagement.
  */
 
 import { createInterface } from "readline";
@@ -20,6 +22,9 @@ import {
   getDailyCount,
 } from "./memory";
 import { runAuto } from "./auto";
+import { ensureMigrated } from "./workflow.migrate";
+import { readWorkflowConfig, getGlobalDailyPostCount, incrementGlobalDailyPosts } from "./workflow";
+import type { WorkflowConfig } from "./workflow.types";
 
 // --- Helpers ---
 
@@ -62,9 +67,15 @@ function sessionSummary(actions: Record<string, number>): void {
 // --- Main Session ---
 
 /** Run the interactive Twitter engagement session.
- *  Validates credentials, fetches the feed, then loops through each tweet
- *  presenting Claude's suggestion and the action menu. */
-export async function twitter(opts: { manual?: boolean } = {}) {
+ *  Validates credentials, loads workflow config, fetches the feed, then loops
+ *  through each tweet presenting Claude's suggestion and the action menu. */
+export async function twitter(opts: { manual?: boolean; workflow: string }) {
+  // --- Migration + Workflow Loading ---
+  ensureMigrated();
+
+  const wf: WorkflowConfig = readWorkflowConfig(opts.workflow);
+  const workflowName = opts.workflow;
+
   // --- Credential Validation ---
   const env = readEnv();
   const apiKey = env.TWITTER_API_KEY;
@@ -79,13 +90,12 @@ export async function twitter(opts: { manual?: boolean } = {}) {
   }
 
   createTwitterClient(apiKey);
-  const config = readConfig();
 
-  console.log(`\n${bold(cyan("myteam twitter"))} ${dim("— engagement session")}\n`);
+  console.log(`\n${bold(cyan("myteam twitter"))} ${dim(`\u2014 ${workflowName} workflow`)}\n`);
 
   // --- Feed Loading ---
   const spin = spinner("Fetching feed...");
-  const { items, counts } = await fetchFeed();
+  const { items, counts } = await fetchFeed(wf, workflowName);
   spin.stop();
 
   console.log(
@@ -96,19 +106,20 @@ export async function twitter(opts: { manual?: boolean } = {}) {
   );
 
   if (items.length === 0) {
-    info("No tweets to engage with. Try adding topics/keywords in config.");
+    info("No tweets to engage with. Try adding topics/keywords in your workflow config.");
     return;
   }
 
   // --- Mode Selection: auto (default) vs manual ---
   if (!opts.manual) {
-    await runAuto(items, config);
+    await runAuto(items, readConfig(), wf, workflowName);
     return;
   }
 
   // --- Interactive Loop (--manual) ---
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const actions: Record<string, number> = { replies: 0, likes: 0, retweets: 0, posts: 0, skipped: 0 };
+  const limits = wf.limits;
 
   // Print summary on Ctrl+C / stream close
   rl.on("close", () => {
@@ -128,11 +139,11 @@ export async function twitter(opts: { manual?: boolean } = {}) {
 
     // --- Claude Analysis ---
     const spin2 = spinner("Analyzing...");
-    const analysis = await analyzeTweet(item);
+    const analysis = await analyzeTweet(item, wf, workflowName);
     spin2.stop();
 
     console.log(
-      `${dim("Suggestion:")} ${bold(analysis.action)} ${dim(`— ${analysis.reason}`)}`
+      `${dim("Suggestion:")} ${bold(analysis.action)} ${dim(`\u2014 ${analysis.reason}`)}`
     );
     if (analysis.draft) {
       console.log(`${dim("Draft:")} ${analysis.draft}`);
@@ -154,33 +165,34 @@ export async function twitter(opts: { manual?: boolean } = {}) {
 
     // Skip — log the skip reason for learning, then move to next tweet
     if (c === "s" || c === "") {
-      logSkip(item.tweet.username, item.tweet.text, analysis.reason);
+      logSkip(item.tweet.username, item.tweet.text, analysis.reason, workflowName);
       actions.skipped++;
       continue;
     }
 
-    // Block — permanently block this account and skip
+    // Block — permanently block this account (global) and skip
     if (c === "b") {
       blockAccount(item.tweet.username);
-      logSkip(item.tweet.username, item.tweet.text, "User blocked account");
+      logSkip(item.tweet.username, item.tweet.text, "User blocked account", workflowName);
       actions.skipped++;
-      success(`Blocked @${item.tweet.username} — they won't appear in future sessions`);
+      success(`Blocked @${item.tweet.username} \u2014 they won't appear in future sessions`);
       continue;
     }
 
     // Like
     if (c === "l") {
-      if (actions.likes >= config.limits.maxLikesPerSession) {
-        info(`Like limit reached (${config.limits.maxLikesPerSession}/session). Skipping.`);
+      if (actions.likes >= limits.maxLikesPerSession) {
+        info(`Like limit reached (${limits.maxLikesPerSession}/session). Skipping.`);
         continue;
       }
       try {
-        await likeTweet(item.tweet.id, config);
-        logLike(item.tweet.id);
+        await likeTweet(item.tweet.id, readConfig());
+        logLike(item.tweet.id, workflowName);
         actions.likes++;
         success(`Liked @${item.tweet.username}'s tweet`);
-      } catch (e: any) {
-        error(`Failed to like: ${e.message}`);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        error(`Failed to like: ${msg}`);
       }
       continue;
     }
@@ -188,20 +200,21 @@ export async function twitter(opts: { manual?: boolean } = {}) {
     // Retweet
     if (c === "rt" || c === "R") {
       try {
-        await retweet(item.tweet.id, config);
-        logRetweet(item.tweet.id);
+        await retweet(item.tweet.id, readConfig());
+        logRetweet(item.tweet.id, workflowName);
         actions.retweets++;
         success(`Retweeted @${item.tweet.username}'s tweet`);
-      } catch (e: any) {
-        error(`Failed to retweet: ${e.message}`);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        error(`Failed to retweet: ${msg}`);
       }
       continue;
     }
 
     // Reply — use Claude's draft if available, otherwise generate one
     if (c === "r") {
-      if (actions.replies >= config.limits.maxRepliesPerSession) {
-        info(`Reply limit reached (${config.limits.maxRepliesPerSession}/session). Skipping.`);
+      if (actions.replies >= limits.maxRepliesPerSession) {
+        info(`Reply limit reached (${limits.maxRepliesPerSession}/session). Skipping.`);
         continue;
       }
 
@@ -209,7 +222,7 @@ export async function twitter(opts: { manual?: boolean } = {}) {
       let draft = analysis.action === "reply" && analysis.draft ? analysis.draft : null;
       if (!draft) {
         const spin3 = spinner("Crafting reply...");
-        draft = await craftReply(item);
+        draft = await craftReply(item, undefined, wf, workflowName);
         spin3.stop();
       }
 
@@ -229,25 +242,26 @@ export async function twitter(opts: { manual?: boolean } = {}) {
       }
 
       try {
-        const tweetId = await postTweet(finalText, { replyTo: item.tweet.id }, config);
-        logReply(item.tweet.id, item.tweet.userId, item.tweet.username, finalText);
+        await postTweet(finalText, { replyTo: item.tweet.id }, readConfig());
+        logReply(item.tweet.id, item.tweet.userId, item.tweet.username, finalText, workflowName);
         actions.replies++;
         success(`Replied to @${item.tweet.username}`);
-      } catch (e: any) {
-        error(`Failed to reply: ${e.message}`);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        error(`Failed to reply: ${msg}`);
       }
       continue;
     }
 
     // Quote tweet
     if (c === "q") {
-      if (actions.replies >= config.limits.maxRepliesPerSession) {
-        info(`Reply limit reached (${config.limits.maxRepliesPerSession}/session). Skipping.`);
+      if (actions.replies >= limits.maxRepliesPerSession) {
+        info(`Reply limit reached (${limits.maxRepliesPerSession}/session). Skipping.`);
         continue;
       }
 
       const spin3 = spinner("Crafting quote tweet...");
-      const draft = await craftReply(item, "Write a quote tweet commentary, not a direct reply.");
+      const draft = await craftReply(item, "Write a quote tweet commentary, not a direct reply.", wf, workflowName);
       spin3.stop();
 
       console.log(`\n${dim("Quote:")} ${draft}\n`);
@@ -266,25 +280,27 @@ export async function twitter(opts: { manual?: boolean } = {}) {
       }
 
       try {
-        await postTweet(finalText, { quote: item.tweet.id }, config);
-        logReply(item.tweet.id, item.tweet.userId, item.tweet.username, `[QT] ${finalText}`);
+        await postTweet(finalText, { quote: item.tweet.id }, readConfig());
+        logReply(item.tweet.id, item.tweet.userId, item.tweet.username, `[QT] ${finalText}`, workflowName);
         actions.replies++;
         success(`Quoted @${item.tweet.username}'s tweet`);
-      } catch (e: any) {
-        error(`Failed to quote tweet: ${e.message}`);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        error(`Failed to quote tweet: ${msg}`);
       }
       continue;
     }
 
     // Post original tweet (unrelated to current feed item)
     if (c === "p") {
-      if (getDailyCount("posts") >= config.limits.maxPostsPerDay) {
-        info(`Daily post limit reached (${config.limits.maxPostsPerDay}/day). Skipping.`);
+      // Check global daily post limit across all workflows
+      if (getGlobalDailyPostCount() >= limits.maxPostsPerDay) {
+        info(`Daily post limit reached (${limits.maxPostsPerDay}/day). Skipping.`);
         continue;
       }
 
       const spin3 = spinner("Composing tweet...");
-      const draft = await composeTweet();
+      const draft = await composeTweet(undefined, wf, workflowName);
       spin3.stop();
 
       console.log(`\n${dim("Tweet:")} ${draft}\n`);
@@ -303,12 +319,14 @@ export async function twitter(opts: { manual?: boolean } = {}) {
       }
 
       try {
-        const tweetId = await postTweet(finalText, undefined, config);
-        logPost(tweetId ?? "unknown", finalText);
+        const tweetId = await postTweet(finalText, undefined, readConfig());
+        logPost(tweetId ?? "unknown", finalText, workflowName);
+        incrementGlobalDailyPosts();
         actions.posts++;
         success("Posted tweet");
-      } catch (e: any) {
-        error(`Failed to post: ${e.message}`);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        error(`Failed to post: ${msg}`);
       }
       continue;
     }

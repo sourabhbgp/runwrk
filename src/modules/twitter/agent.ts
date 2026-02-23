@@ -2,7 +2,8 @@
  * agent.ts — Claude integration for tweet analysis and reply generation.
  *
  * Provides functions to analyze tweets (suggest reply/like/skip), craft replies,
- * and compose original tweets. System prompt logic lives in prompt.ts.
+ * and compose original tweets. When a WorkflowConfig is provided, the strategy
+ * prompt and action biases are injected into Claude's system prompt via prompt.ts.
  */
 
 import Anthropic from "@anthropic-ai/sdk";
@@ -11,6 +12,7 @@ import { readEnv } from "../../common";
 import { readConfig } from "./config";
 import { buildSystemPrompt } from "./prompt";
 import type { FeedItem } from "./feed";
+import type { WorkflowConfig } from "./workflow.types";
 
 // --- Types ---
 
@@ -37,8 +39,13 @@ function getAnthropicClient(): Anthropic {
 // --- Tweet Analysis ---
 
 /** Send a tweet to Claude for analysis. Returns a suggested action (reply/like/skip/etc.)
- *  with reasoning and an optional draft reply. Includes thread context if available. */
-export async function analyzeTweet(item: FeedItem): Promise<Analysis> {
+ *  with reasoning and an optional draft reply. Includes thread context if available.
+ *  When workflow is provided, injects strategy and action biases into the system prompt. */
+export async function analyzeTweet(
+  item: FeedItem,
+  workflow?: WorkflowConfig,
+  workflowName?: string,
+): Promise<Analysis> {
   const client = getAnthropicClient();
   const threadContext = item.thread
     ? item.thread.map((t) => `@${t.username}: ${t.text}`).join("\n")
@@ -57,7 +64,7 @@ Respond in this exact JSON format (no markdown, no code fences):
   const response = await client.messages.create({
     model: "claude-sonnet-4-5-20250929",
     max_tokens: 300,
-    system: buildSystemPrompt(),
+    system: buildSystemPrompt(workflow, workflowName),
     messages: [{ role: "user", content: prompt }],
   });
 
@@ -76,7 +83,9 @@ Respond in this exact JSON format (no markdown, no code fences):
  *  Returns the raw reply text (under 280 chars). */
 export async function craftReply(
   item: FeedItem,
-  userGuidance?: string
+  userGuidance?: string,
+  workflow?: WorkflowConfig,
+  workflowName?: string,
 ): Promise<string> {
   const client = getAnthropicClient();
   const threadContext = item.thread
@@ -93,7 +102,7 @@ ${userGuidance ? `## User Guidance\n${userGuidance}\n\n` : ""}Reply with ONLY th
   const response = await client.messages.create({
     model: "claude-sonnet-4-5-20250929",
     max_tokens: 200,
-    system: buildSystemPrompt(),
+    system: buildSystemPrompt(workflow, workflowName),
     messages: [{ role: "user", content: prompt }],
   });
 
@@ -103,11 +112,19 @@ ${userGuidance ? `## User Guidance\n${userGuidance}\n\n` : ""}Reply with ONLY th
 // --- Original Tweet Composition ---
 
 /** Ask Claude to compose an original tweet about a given topic (or default from config).
- *  Returns the raw tweet text (under 280 chars). */
-export async function composeTweet(topic?: string): Promise<string> {
+ *  When a workflow is provided, uses the workflow's topics instead of global config. */
+export async function composeTweet(
+  topic?: string,
+  workflow?: WorkflowConfig,
+  workflowName?: string,
+): Promise<string> {
   const client = getAnthropicClient();
+  // Prefer workflow topics when available, fall back to global config
   const config = readConfig();
-  const topicHint = topic ?? config.topics[0] ?? "something interesting in tech";
+  const topicHint = topic
+    ?? (workflow && workflow.topics.length > 0 ? workflow.topics[0] : null)
+    ?? config.topics[0]
+    ?? "something interesting in tech";
 
   const prompt = `Compose an original tweet about: ${topicHint}
 
@@ -117,7 +134,7 @@ Make it insightful, engaging, and authentic — not generic or overly promotiona
   const response = await client.messages.create({
     model: "claude-sonnet-4-5-20250929",
     max_tokens: 200,
-    system: buildSystemPrompt(),
+    system: buildSystemPrompt(workflow, workflowName),
     messages: [{ role: "user", content: prompt }],
   });
 

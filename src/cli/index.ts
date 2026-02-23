@@ -47,11 +47,16 @@ function getHelpText(): string {
     {
       title: "Twitter",
       commands: [
-        { cmd: "twitter", desc: "Run autonomous engagement (default: auto)" },
-        { cmd: "twitter --manual", desc: "Run interactive engagement" },
+        { cmd: "twitter -w <name>", desc: "Run engagement workflow (default: auto)" },
+        { cmd: "twitter -w <name> --manual", desc: "Run interactive engagement" },
         { cmd: "twitter setup", desc: "Configure credentials and preferences" },
-        { cmd: "twitter stats", desc: "View engagement analytics" },
-        { cmd: "twitter feedback", desc: "Manage agent directives" },
+        { cmd: "twitter stats", desc: "View all workflow stats" },
+        { cmd: "twitter stats -w <name>", desc: "View stats for one workflow" },
+        { cmd: "twitter feedback -w <name>", desc: "Manage agent directives" },
+        { cmd: "twitter workflow create", desc: "Create a new workflow" },
+        { cmd: "twitter workflow list", desc: "List all workflows" },
+        { cmd: "twitter workflow edit -w <n>", desc: "Edit a workflow" },
+        { cmd: "twitter workflow delete -w <n>", desc: "Delete a workflow" },
       ],
     },
   ];

@@ -3,10 +3,12 @@
  *
  * Stores topics, keywords, watch accounts, and rate limits.
  * Falls back to sensible defaults if no config file exists.
+ * Also provides a helper to merge workflow-specific limits with global defaults.
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
+import type { WorkflowConfig } from "./workflow.types";
 
 const CONFIG_PATH = join(process.cwd(), ".myteam", "twitter-config.json");
 
@@ -68,4 +70,15 @@ export function writeConfig(config: TwitterConfig): void {
 export function getDelay(config?: TwitterConfig): number {
   const [min, max] = (config ?? readConfig()).limits.delayBetweenActions;
   return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+/** Merge workflow limits with global config defaults.
+ *  When a workflow is provided, its limits take precedence. */
+export function mergedLimits(workflow?: WorkflowConfig): TwitterConfig["limits"] {
+  const globalLimits = readConfig().limits;
+  if (!workflow) return globalLimits;
+  return {
+    ...globalLimits,
+    ...workflow.limits,
+  };
 }

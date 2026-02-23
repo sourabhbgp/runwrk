@@ -3,11 +3,13 @@
  *
  * Lets the user add general feedback (e.g. "be funnier", "stop engaging with crypto")
  * that the agent remembers across sessions and incorporates into its system prompt.
+ * Directives are stored per-workflow so different strategies can have different guidance.
  */
 
 import { createInterface } from "readline";
 import { bold, dim, cyan, green, red, info, success, divider } from "../../common";
 import { getFeedback, addFeedback, removeFeedback } from "./memory";
+import { ensureMigrated } from "./workflow.migrate";
 
 // --- Helpers ---
 
@@ -19,8 +21,8 @@ function prompt(rl: ReturnType<typeof createInterface>, q: string): Promise<stri
 }
 
 /** Display all current feedback entries with numbered indices */
-function showFeedback(): void {
-  const entries = getFeedback();
+function showFeedback(workflowName: string): void {
+  const entries = getFeedback(workflowName);
   if (entries.length === 0) {
     info("No feedback directives yet. Add one to guide the agent's behavior.");
     return;
@@ -35,14 +37,18 @@ function showFeedback(): void {
 
 // --- Main Command ---
 
-/** Interactive loop for viewing, adding, and removing feedback directives */
-export async function twitterFeedback(): Promise<void> {
-  console.log(`\n${bold(cyan("myteam twitter feedback"))} ${dim("— manage agent directives")}\n`);
+/** Interactive loop for viewing, adding, and removing feedback directives
+ *  for a specific workflow. */
+export async function twitterFeedback(opts: { workflow: string }): Promise<void> {
+  ensureMigrated();
+
+  const workflowName = opts.workflow;
+  console.log(`\n${bold(cyan("myteam twitter feedback"))} ${dim(`\u2014 ${workflowName} workflow`)}\n`);
 
   const rl = createInterface({ input: process.stdin, output: process.stdout });
 
   // Show existing entries on launch
-  showFeedback();
+  showFeedback(workflowName);
 
   // Main loop — add, remove, or exit
   while (true) {
@@ -63,33 +69,33 @@ export async function twitterFeedback(): Promise<void> {
       const text = await prompt(rl, `${cyan(">")} Directive: `);
       const trimmed = text.trim();
       if (!trimmed) {
-        info("Empty input — skipped.");
+        info("Empty input \u2014 skipped.");
         continue;
       }
-      addFeedback(trimmed);
+      addFeedback(trimmed, workflowName);
       success(`Added: "${trimmed}"`);
-      showFeedback();
+      showFeedback(workflowName);
       continue;
     }
 
     // Remove an existing entry by number
     if (c === "r" || c === "remove") {
-      const entries = getFeedback();
+      const entries = getFeedback(workflowName);
       if (entries.length === 0) {
         info("Nothing to remove.");
         continue;
       }
-      showFeedback();
+      showFeedback(workflowName);
       const numStr = await prompt(rl, `${cyan("?")} Entry number to remove: `);
       const num = parseInt(numStr, 10);
       if (isNaN(num) || num < 1 || num > entries.length) {
-        info("Invalid number — skipped.");
+        info("Invalid number \u2014 skipped.");
         continue;
       }
       const removed = entries[num - 1];
-      removeFeedback(num - 1);
+      removeFeedback(num - 1, workflowName);
       success(`Removed: "${removed}"`);
-      showFeedback();
+      showFeedback(workflowName);
       continue;
     }
 

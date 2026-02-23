@@ -1,24 +1,35 @@
 /**
- * auto.ts — Autonomous engagement mode (triggered by `myteam twitter --auto`).
+ * auto.ts — Autonomous engagement mode (triggered by `myteam twitter` default).
  *
  * Claude analyzes each tweet and takes action automatically, respecting session
- * limits. All decisions (including skips) are logged to memory for learning.
- * Prints a summary and action log at the end.
+ * and global limits. When a workflow is provided, uses its strategy and limits.
+ * All decisions (including skips) are logged to workflow-scoped memory for learning.
  */
 
 import { bold, dim, cyan, green, yellow, success, info, error, spinner, divider } from "../../common";
 import { postTweet, likeTweet, retweet } from "./api";
 import { analyzeTweet } from "./agent";
-import { logReply, logLike, logRetweet, logSkip, getDailyCount } from "./memory";
+import { logReply, logLike, logRetweet, logSkip } from "./memory";
+import { getGlobalDailyPostCount, incrementGlobalDailyPosts } from "./workflow";
 import type { FeedItem } from "./feed";
 import type { TwitterConfig } from "./config";
+import type { WorkflowConfig } from "./workflow.types";
 import { fetchThread } from "./feed";
 
 /** Run the auto engagement loop — Claude decides and acts, limits enforced.
+ *  When a workflow is provided, uses its limits and passes strategy to the agent.
  *  Iterates through all feed items, skipping already-engaged tweets,
  *  and logs every action for learning and audit purposes. */
-export async function runAuto(items: FeedItem[], config: TwitterConfig) {
-  console.log(`${bold(yellow("Auto mode"))} ${dim("— Claude decides, limits enforced")}\n`);
+export async function runAuto(
+  items: FeedItem[],
+  config: TwitterConfig,
+  workflow?: WorkflowConfig,
+  workflowName?: string,
+) {
+  console.log(`${bold(yellow("Auto mode"))} ${dim("\u2014 Claude decides, limits enforced")}\n`);
+
+  // Use workflow limits when available, otherwise global config limits
+  const limits = workflow?.limits ?? config.limits;
 
   const actions = { replies: 0, likes: 0, retweets: 0, skipped: 0 };
   const log: string[] = [];
@@ -29,8 +40,8 @@ export async function runAuto(items: FeedItem[], config: TwitterConfig) {
 
     // Stop if both reply and like limits are reached
     if (
-      actions.replies >= config.limits.maxRepliesPerSession &&
-      actions.likes >= config.limits.maxLikesPerSession
+      actions.replies >= limits.maxRepliesPerSession &&
+      actions.likes >= limits.maxLikesPerSession
     ) {
       info("Session limits reached. Stopping.");
       break;
@@ -45,10 +56,11 @@ export async function runAuto(items: FeedItem[], config: TwitterConfig) {
     const spin = spinner(`Analyzing @${item.tweet.username}...`);
     let analysis;
     try {
-      analysis = await analyzeTweet(item);
-    } catch (e: any) {
+      analysis = await analyzeTweet(item, workflow, workflowName);
+    } catch (e: unknown) {
       spin.stop();
-      error(`Analysis failed: ${e.message}`);
+      const msg = e instanceof Error ? e.message : String(e);
+      error(`Analysis failed: ${msg}`);
       continue;
     }
     spin.stop();
@@ -57,7 +69,7 @@ export async function runAuto(items: FeedItem[], config: TwitterConfig) {
 
     // --- Handle Skip ---
     if (action === "skip") {
-      logSkip(item.tweet.username, item.tweet.text, analysis.reason);
+      logSkip(item.tweet.username, item.tweet.text, analysis.reason, workflowName);
       actions.skipped++;
       log.push(`${dim("skip")} @${item.tweet.username}: ${analysis.reason}`);
       continue;
@@ -65,15 +77,16 @@ export async function runAuto(items: FeedItem[], config: TwitterConfig) {
 
     // --- Handle Like ---
     if (action === "like") {
-      if (actions.likes >= config.limits.maxLikesPerSession) continue;
+      if (actions.likes >= limits.maxLikesPerSession) continue;
       try {
         await likeTweet(item.tweet.id, config);
-        logLike(item.tweet.id);
+        logLike(item.tweet.id, workflowName);
         actions.likes++;
         log.push(`${green("like")} @${item.tweet.username}`);
         success(`Liked @${item.tweet.username}`);
-      } catch (e: any) {
-        error(`Like failed: ${e.message}`);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        error(`Like failed: ${msg}`);
       }
       continue;
     }
@@ -82,40 +95,48 @@ export async function runAuto(items: FeedItem[], config: TwitterConfig) {
     if (action === "retweet") {
       try {
         await retweet(item.tweet.id, config);
-        logRetweet(item.tweet.id);
+        logRetweet(item.tweet.id, workflowName);
         actions.retweets++;
         log.push(`${green("RT")} @${item.tweet.username}`);
         success(`Retweeted @${item.tweet.username}`);
-      } catch (e: any) {
-        error(`Retweet failed: ${e.message}`);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        error(`Retweet failed: ${msg}`);
       }
       continue;
     }
 
     // --- Handle Reply / Quote ---
     if (action === "reply" || action === "quote") {
-      if (actions.replies >= config.limits.maxRepliesPerSession) continue;
+      if (actions.replies >= limits.maxRepliesPerSession) continue;
       // Skip if Claude didn't provide draft text
       if (!analysis.draft) {
         actions.skipped++;
         continue;
       }
 
+      // Check global daily post limit for quotes (they create new tweets)
+      if (action === "quote" && getGlobalDailyPostCount() >= limits.maxPostsPerDay) {
+        continue;
+      }
+
       try {
         if (action === "reply") {
           await postTweet(analysis.draft, { replyTo: item.tweet.id }, config);
-          logReply(item.tweet.id, item.tweet.userId, item.tweet.username, analysis.draft);
+          logReply(item.tweet.id, item.tweet.userId, item.tweet.username, analysis.draft, workflowName);
           log.push(`${green("reply")} @${item.tweet.username}: ${dim(analysis.draft.slice(0, 60))}`);
           success(`Replied to @${item.tweet.username}`);
         } else {
           await postTweet(analysis.draft, { quote: item.tweet.id }, config);
-          logReply(item.tweet.id, item.tweet.userId, item.tweet.username, `[QT] ${analysis.draft}`);
+          logReply(item.tweet.id, item.tweet.userId, item.tweet.username, `[QT] ${analysis.draft}`, workflowName);
+          incrementGlobalDailyPosts();
           log.push(`${green("quote")} @${item.tweet.username}: ${dim(analysis.draft.slice(0, 60))}`);
           success(`Quoted @${item.tweet.username}`);
         }
         actions.replies++;
-      } catch (e: any) {
-        error(`${action} failed: ${e.message}`);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        error(`${action} failed: ${msg}`);
       }
       continue;
     }
