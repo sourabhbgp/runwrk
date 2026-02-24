@@ -24,30 +24,7 @@ src/
     │   ├── commands.ts       # Chat slash-command handling
     │   ├── memory.ts         # Chat conversation memory
     │   └── index.ts          # Public API: { chat }
-    └── twitter/              # Twitter engagement module
-        ├── api.ts            # Rettiwt wrapper — all Twitter operations
-        ├── feed.ts           # Fetch & organize: mentions, timeline, discovery (workflow-aware)
-        ├── agent.ts          # Claude integration — analyze tweets, craft replies (workflow-aware)
-        ├── prompt.ts         # System prompt builder (injects workflow strategy + working memory)
-        ├── session.ts        # Interactive approve/edit/skip loop (requires workflow)
-        ├── auto.ts           # Autonomous mode (workflow-aware)
-        ├── config.ts         # Read/write .myteam/twitter-config.json + mergedLimits helper
-        ├── stats.ts          # Engagement analytics (per-workflow or cross-workflow summary)
-        ├── memory.ts         # Public API facade — thin wrappers delegating to tiered storage modules
-        ├── memory.types.ts   # Type definitions for the tiered memory system
-        ├── memory.actions.ts # Raw action log CRUD (logAction, hasEngaged, getDailyStats)
-        ├── memory.facts.ts   # Atomic knowledge store (add/update/delete facts from consolidation)
-        ├── memory.observations.ts # Session summaries + reflection compression
-        ├── memory.relationships.ts # Per-account CRM (warmth tiers, reciprocity, topics)
-        ├── memory.working.ts # Working memory assembler (~2-3K token prompt block)
-        ├── memory.consolidate.ts # Daily LLM extraction pipeline (actions → facts/observations/relationships)
-        ├── feedback.ts       # Persistent agent directives (per-workflow)
-        ├── setup.ts          # Credential setup (rettiwt API key)
-        ├── workflow.types.ts  # Shared types: WorkflowConfig, GlobalSafetyState, FeedFilters, etc.
-        ├── workflow.ts        # Workflow CRUD + global safety state persistence + path helpers
-        ├── workflow.templates.ts # Template factories: follower-growth, hashtag-niche, custom
-        ├── workflow.migrate.ts   # Two-stage migration: legacy flat → workflows, memory.json → actions.json
-        ├── workflow.commands.ts  # Interactive create/list/edit/delete commands
+    └── twitter/              # Twitter engagement module (22 files — see src/modules/twitter/CLAUDE.md)
         └── index.ts          # Public API: { twitter, twitterSetup, twitterStats, twitterFeedback, workflowCreate, workflowList, workflowEdit, workflowDelete, runManualConsolidation }
 ```
 
@@ -60,76 +37,6 @@ src/
 - **`src/index.ts`** is the CLI entry point. It only builds and runs the Commander program from `src/cli/`.
 - **`src/cli/`** manages all CLI commands via Commander.js. Each command lives in its own `register.*.ts` file and is wired up in `src/cli/index.ts`.
 - **DRY** — before writing new code, check `common/` and existing modules for reusable logic. Extract repeated patterns into `common/` rather than duplicating across modules.
-
-# Twitter Workflow System
-
-Workflows are **goal-driven engagement campaigns** with isolated memory, strategy prompts, feed filtering, and action biases. Each workflow runs independently while sharing global safety state.
-
-## Storage Layout
-
-```
-.myteam/
-├── twitter-config.json              ← global (API setup, default limits) — unchanged
-├── twitter-global.json              ← shared safety state (blocked accounts, daily post counts)
-└── workflows/                       ← per-workflow directories
-    ├── default/                     ← auto-migrated from legacy flat data
-    │   ├── workflow.json            ← WorkflowConfig (strategy, filters, limits, etc.)
-    │   ├── actions.json            ← raw action log (every reply, like, skip, etc.)
-    │   ├── facts.json              ← atomic knowledge extracted by LLM consolidation
-    │   ├── observations.json       ← session summaries + compressed period summaries
-    │   └── relationships.json      ← per-account CRM data (warmth, reciprocity, topics)
-    └── <user-created>/
-        ├── workflow.json
-        ├── actions.json
-        ├── facts.json
-        ├── observations.json
-        └── relationships.json
-```
-
-## Key Concepts
-
-- **Isolation**: Each workflow has its own tiered memory — action log, facts, observations, and relationships never cross-contaminate.
-- **Global safety**: Blocked accounts and daily post counts are shared across all workflows via `twitter-global.json`.
-- **Templates**: Two built-in templates (`follower-growth`, `hashtag-niche`) plus `custom`. Factories in `workflow.templates.ts`.
-- **Auto-migration**: `ensureMigrated()` in `workflow.migrate.ts` runs at the top of any workflow-aware command. Stage 1 moves legacy `twitter-memory.json` into `workflows/default/`. Stage 2 converts `memory.json` into `actions.json` + empty stores. Old files renamed to `.backup`.
-- **Workflow-aware functions**: All memory, prompt, feed, and agent functions accept optional `workflowName?: string` and/or `workflow?: WorkflowConfig` parameters. Without them, they fall back to legacy behavior.
-
-## Tiered Memory System
-
-The memory system has four layers, each backed by a separate JSON file per workflow:
-
-1. **Actions** (`actions.json`) — raw engagement log. Every reply, like, skip is appended as an atomic entry. Source of truth.
-2. **Facts** (`facts.json`) — durable knowledge extracted by LLM consolidation (e.g. "Replies with questions get 3x engagement"). Managed via ADD/UPDATE/DELETE operations. Typically <50 per workflow.
-3. **Observations** (`observations.json`) — session-level summaries from consolidation. When they grow large (~15K tokens), a reflection pass compresses older observations into period summaries.
-4. **Relationships** (`relationships.json`) — per-account CRM. Tracks warmth (cold→warm→hot based on interaction count), reciprocity score, topics, and notes.
-
-**Working Memory**: `memory.working.ts` assembles a bounded ~2-3K token block from all four stores for injection into the system prompt. This keeps prompt size constant regardless of how many sessions have run.
-
-**Consolidation**: `memory.consolidate.ts` runs daily (24h interval, actions must be 12h old). Groups actions into sessions (30-min gap = new session), sends to Claude, applies resulting fact updates, observations, and relationship notes. Can be triggered manually via `myteam twitter consolidate -w <name>`.
-
-**Facade**: `memory.ts` preserves all old export signatures (`logReply`, `hasRepliedTo`, `readMemory`, etc.) but delegates to the new storage modules. No callers (session.ts, auto.ts, feed.ts) needed changes.
-
-## CLI Usage
-
-```
-myteam twitter -w <name>              # Run workflow (auto mode)
-myteam twitter -w <name> --manual     # Run workflow (interactive)
-myteam twitter workflow create        # Interactive guided setup
-myteam twitter workflow list          # List all workflows
-myteam twitter workflow edit -w <n>   # Edit workflow config
-myteam twitter workflow delete -w <n> # Delete workflow + history
-myteam twitter stats                  # Summary across all workflows
-myteam twitter stats -w <name>        # Detailed stats for one workflow
-myteam twitter feedback -w <name>     # Manage per-workflow directives
-myteam twitter consolidate -w <name>  # Run memory consolidation manually
-```
-
-## Adding a New Workflow Template
-
-1. Add a factory function in `src/modules/twitter/workflow.templates.ts` (follow `createFollowerGrowthWorkflow` pattern).
-2. Add the template key to the `WorkflowTemplate` union in `workflow.types.ts`.
-3. Register it in the `TEMPLATES` map in `workflow.templates.ts`.
-4. The interactive `workflowCreate()` picker will automatically include it.
 
 # Adding a New Module
 
@@ -164,6 +71,42 @@ All CLI commands, subcommands, flags, and descriptions are managed via Commander
 - Never use `@ts-ignore` or `@ts-expect-error` — fix the type issue instead.
 - Prefer `interface` for object shapes and `type` for unions/intersections.
 - All new code must be type-safe — no implicit `any`, no untyped catch clauses without narrowing.
+
+# Testing
+
+- **Framework**: Vitest (`vitest.config.ts` at root). Run via `bun test` (all), `bun test:unit`, `bun test:integration`, `bun test:e2e`, `bun test:coverage`.
+- **All new code must include tests.** Unit tests at minimum; integration tests for cross-module or filesystem behavior; e2e for CLI binary changes.
+
+## Directory Structure
+
+```
+tests/
+├── setup.ts                    # Global setup (silences console via vi.spyOn)
+├── helpers/
+│   ├── index.ts                # Barrel exports for all helpers
+│   ├── fixtures.ts             # createTestWorkspace() — temp dirs with .myteam/ structure
+│   ├── mock-data.ts            # Factory functions with partial overrides (createMockFeedItem, createMockWorkflowConfig, etc.)
+│   ├── program-factory.ts      # createTestProgram() — Commander program with exitOverride + captured output
+│   └── strip.ts                # stripAnsi() helper
+├── unit/<module>/              # Pure logic tests — one test file per source file
+├── integration/                # Cross-module or filesystem tests
+│   ├── cli/                    # Commander command routing, flags, help output
+│   └── twitter/                # Workflow lifecycle, memory lifecycle
+└── e2e/                        # Full CLI binary tests (spawned via execSync)
+```
+
+## Conventions
+
+- **Naming**: `<source-file>.test.ts` — mirrors the source file name (e.g. `memory.facts.ts` → `memory.facts.test.ts`).
+- **File header**: JSDoc block explaining what the test file covers and how it works.
+- **Section headers**: Use `// --- sectionName ---` comments to separate test groups within a file.
+- **Isolation**: Use `createTestWorkspace()` in `beforeEach`/`afterEach` for any test touching the filesystem. It creates a temp dir with `.myteam/workflows/` and cleans up after.
+- **Fake timers**: Use `vi.useFakeTimers()` + `vi.setSystemTime()` for time-dependent logic. Always `vi.useRealTimers()` in `afterEach`.
+- **Factory functions**: Use `tests/helpers/mock-data.ts` factories with partial overrides — tests only specify fields they care about.
+- **CLI integration tests**: Use `createTestProgram()` from `tests/helpers/program-factory.ts` — it returns a Commander program with `exitOverride()` and captured stdout/stderr.
+- **E2E tests**: Spawn the actual CLI binary via `execSync("bun run src/index.ts ...")` and assert on exit codes + output.
+- **Path aliases**: Use `@/modules/...` and `@/cli/...` (from tsconfig paths) instead of fragile relative imports.
+- **Mocks**: Prefer `vi.spyOn` over `vi.fn` when the real module exists. Use `restoreMocks: true` (configured globally in vitest.config.ts).
 
 # Code Comments
 
