@@ -186,18 +186,18 @@ describe("logSkip / getSkipPatterns", () => {
     expect(patterns).toContain("self-promotion (1x)");
   });
 
-  it("logSkip caps at 200 entries", () => {
-    // Write 210 skip entries
+  it("logSkip records all entries (action log is unbounded, consolidated later)", () => {
+    // Write 210 skip entries — the new tiered system stores all actions
     for (let i = 0; i < 210; i++) {
       logSkip(`user${i}`, `tweet snippet ${i}`, `reason ${i}`, WF);
     }
 
     const mem = readMemory(WF);
-    expect(mem.skipped).toHaveLength(200);
+    expect(mem.skipped).toHaveLength(210);
 
-    // Should keep the most recent entries (last 200), so first 10 should be gone
-    expect(mem.skipped[0].username).toBe("user10");
-    expect(mem.skipped[199].username).toBe("user209");
+    // Entries are in chronological order
+    expect(mem.skipped[0].username).toBe("user0");
+    expect(mem.skipped[209].username).toBe("user209");
   });
 });
 

@@ -87,15 +87,29 @@ describe("ensureMigrated (full migration)", () => {
     const defaultDir = join(workspace.workflowsDir, "default");
     expect(existsSync(defaultDir)).toBe(true);
 
-    // 2. memory.json should contain repliedTo but NOT blockedAccounts
+    // 2. Stage 2 should have migrated memory.json → actions.json
+    //    memory.json should be renamed to memory.json.backup
     const memoryPath = join(defaultDir, "memory.json");
-    expect(existsSync(memoryPath)).toBe(true);
-    const memory = JSON.parse(readFileSync(memoryPath, "utf-8"));
-    expect(memory.repliedTo).toHaveLength(1);
-    expect(memory.repliedTo[0].tweetId).toBe("t1");
-    expect(memory.liked).toEqual(["t2"]);
-    expect(memory.feedback).toEqual(["Be concise"]);
-    expect(memory).not.toHaveProperty("blockedAccounts");
+    const memoryBackupPath = join(defaultDir, "memory.json.backup");
+    const actionsPath = join(defaultDir, "actions.json");
+    expect(existsSync(memoryPath)).toBe(false);
+    expect(existsSync(memoryBackupPath)).toBe(true);
+    expect(existsSync(actionsPath)).toBe(true);
+
+    // actions.json should contain migrated actions + directives
+    const actionsStore = JSON.parse(readFileSync(actionsPath, "utf-8"));
+    const replies = actionsStore.actions.filter((a: { type: string }) => a.type === "reply");
+    const likes = actionsStore.actions.filter((a: { type: string }) => a.type === "like");
+    expect(replies).toHaveLength(1);
+    expect(replies[0].tweetId).toBe("t1");
+    expect(likes).toHaveLength(1);
+    expect(likes[0].tweetId).toBe("t2");
+    expect(actionsStore.directives).toEqual(["Be concise"]);
+
+    // facts, observations, relationships stores should be initialized
+    expect(existsSync(join(defaultDir, "facts.json"))).toBe(true);
+    expect(existsSync(join(defaultDir, "observations.json"))).toBe(true);
+    expect(existsSync(join(defaultDir, "relationships.json"))).toBe(true);
 
     // 3. twitter-global.json should contain the extracted blocked accounts
     const globalPath = join(workspace.myteamDir, "twitter-global.json");

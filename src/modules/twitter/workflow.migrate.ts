@@ -1,22 +1,27 @@
 /**
- * workflow.migrate.ts — One-time migration from the old flat structure to workflows.
+ * workflow.migrate.ts — Multi-stage migration for the Twitter engagement module.
  *
- * The old layout stored everything in `.myteam/twitter-memory.json` (single flat file).
- * This migrates to the new per-workflow structure:
- *   - blockedAccounts → .myteam/twitter-global.json (shared safety state)
- *   - remaining memory → .myteam/workflows/default/memory.json
- *   - config → .myteam/workflows/default/workflow.json (built via custom template)
+ * Stage 1 (legacy → workflow): Migrates the old flat `.myteam/twitter-memory.json`
+ * into the per-workflow structure at `.myteam/workflows/default/`.
+ *
+ * Stage 2 (memory.json → actions.json): Converts the old memory.json format
+ * (arrays of repliedTo, liked, skipped, etc.) into the new tiered memory system
+ * (actions.json + empty facts/observations/relationships stores).
  *
  * Old files are renamed to .backup — never deleted.
- * Called at the top of any workflow-aware command.
+ * Called at the top of any workflow-aware command via ensureMigrated().
  */
 
-import { readFileSync, existsSync, renameSync, mkdirSync } from "fs";
+import { readFileSync, existsSync, renameSync, mkdirSync, readdirSync } from "fs";
 import { join } from "path";
-import { writeWorkflowConfig, writeGlobalSafety, workflowDir, workflowMemoryPath } from "./workflow";
+import {
+  writeWorkflowConfig, writeGlobalSafety, workflowDir, workflowMemoryPath,
+  workflowActionsPath, workflowFactsPath, workflowObservationsPath, workflowRelationshipsPath,
+} from "./workflow";
 import { createCustomWorkflow } from "./workflow.templates";
 import { writeFileSync } from "fs";
 import { info, dim } from "../../common";
+import type { Action, ActionStore, FactStore, ObservationStore, RelationshipStore } from "./memory.types";
 
 // Lazy path getters for testability with process.chdir
 function getBaseDir(): string { return join(process.cwd(), ".myteam"); }
@@ -24,9 +29,11 @@ function getWorkflowsDir(): string { return join(getBaseDir(), "workflows"); }
 function getOldMemoryPath(): string { return join(getBaseDir(), "twitter-memory.json"); }
 function getOldConfigPath(): string { return join(getBaseDir(), "twitter-config.json"); }
 
-/** Ensure the old flat structure has been migrated to workflow directories.
- *  Safe to call multiple times — no-ops if already migrated. */
-export function ensureMigrated(): void {
+// --- Stage 1: Legacy flat → workflow directories ---
+
+/** Migrate the old flat structure to workflow directories.
+ *  Creates a "default" workflow from the old config and memory. */
+function migrateLegacyToWorkflows(): void {
   const workflowsDir = getWorkflowsDir();
   const oldMemoryPath = getOldMemoryPath();
   const oldConfigPath = getOldConfigPath();
@@ -114,4 +121,189 @@ export function ensureMigrated(): void {
 
   info(`Migration complete. Your data is now in ${dim("workflows/default/")}`);
   info(`Old files renamed to .backup`);
+}
+
+// --- Stage 2: memory.json → actions.json (tiered memory migration) ---
+
+/** Convert a workflow's memory.json into the new tiered memory format.
+ *  Translates repliedTo/liked/skipped/etc. arrays into Action entries in actions.json,
+ *  and initializes empty facts, observations, and relationships stores.
+ *  All migrated actions are marked consolidated: true to prevent re-consolidation. */
+function migrateMemoryToActions(workflowName: string): void {
+  const actionsPath = workflowActionsPath(workflowName);
+  const memoryPath = workflowMemoryPath(workflowName);
+
+  // Already migrated — actions.json exists
+  if (existsSync(actionsPath)) return;
+
+  // No memory.json to migrate — create empty stores
+  if (!existsSync(memoryPath)) {
+    initializeEmptyStores(workflowName);
+    return;
+  }
+
+  // Read old memory data
+  let oldMemory: Record<string, unknown> = {};
+  try {
+    oldMemory = JSON.parse(readFileSync(memoryPath, "utf-8"));
+  } catch {
+    // Corrupt file — create empty stores
+    initializeEmptyStores(workflowName);
+    return;
+  }
+
+  info(`Migrating memory for workflow "${workflowName}"...`);
+
+  const actions: Action[] = [];
+
+  // --- Convert repliedTo[] → reply actions ---
+  const repliedTo = Array.isArray(oldMemory.repliedTo) ? oldMemory.repliedTo as Array<Record<string, unknown>> : [];
+  for (const entry of repliedTo) {
+    actions.push({
+      type: "reply",
+      tweetId: String(entry.tweetId ?? ""),
+      userId: String(entry.userId ?? ""),
+      username: String(entry.username ?? ""),
+      text: entry.ourReply ? String(entry.ourReply) : undefined,
+      date: String(entry.date ?? new Date().toISOString()),
+      consolidated: true,
+    });
+  }
+
+  // --- Convert liked[] → like actions ---
+  const liked = Array.isArray(oldMemory.liked) ? oldMemory.liked as string[] : [];
+  for (const tweetId of liked) {
+    actions.push({
+      type: "like",
+      tweetId: String(tweetId),
+      date: new Date().toISOString(), // No date in old format, use now
+      consolidated: true,
+    });
+  }
+
+  // --- Convert retweeted[] → retweet actions ---
+  const retweeted = Array.isArray(oldMemory.retweeted) ? oldMemory.retweeted as string[] : [];
+  for (const tweetId of retweeted) {
+    actions.push({
+      type: "retweet",
+      tweetId: String(tweetId),
+      date: new Date().toISOString(),
+      consolidated: true,
+    });
+  }
+
+  // --- Convert posted[] → post actions ---
+  const posted = Array.isArray(oldMemory.posted) ? oldMemory.posted as Array<Record<string, unknown>> : [];
+  for (const entry of posted) {
+    actions.push({
+      type: "post",
+      tweetId: String(entry.tweetId ?? ""),
+      text: entry.ourReply ? String(entry.ourReply) : undefined,
+      date: String(entry.date ?? new Date().toISOString()),
+      consolidated: true,
+    });
+  }
+
+  // --- Convert followed[] → follow actions ---
+  const followed = Array.isArray(oldMemory.followed) ? oldMemory.followed as string[] : [];
+  for (const userId of followed) {
+    actions.push({
+      type: "follow",
+      userId: String(userId),
+      date: new Date().toISOString(),
+      consolidated: true,
+    });
+  }
+
+  // --- Convert skipped[] → skip actions ---
+  const skipped = Array.isArray(oldMemory.skipped) ? oldMemory.skipped as Array<Record<string, unknown>> : [];
+  for (const entry of skipped) {
+    actions.push({
+      type: "skip",
+      username: String(entry.username ?? ""),
+      text: entry.snippet ? String(entry.snippet).slice(0, 120) : undefined,
+      reason: entry.reason ? String(entry.reason) : undefined,
+      date: String(entry.date ?? new Date().toISOString()),
+      consolidated: true,
+    });
+  }
+
+  // --- Extract feedback → directives ---
+  const feedback = Array.isArray(oldMemory.feedback) ? oldMemory.feedback as string[] : [];
+
+  // --- Write the new action store ---
+  const store: ActionStore = {
+    actions,
+    directives: feedback,
+    lastConsolidation: null, // No consolidation has run on the new system yet
+  };
+
+  const dir = workflowDir(workflowName);
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  writeFileSync(actionsPath, JSON.stringify(store, null, 2) + "\n");
+
+  // --- Initialize empty facts, observations, relationships stores ---
+  initializeEmptyStores(workflowName, true); // skip actions.json since we just wrote it
+
+  // --- Backup old memory.json ---
+  try {
+    renameSync(memoryPath, memoryPath + ".backup");
+  } catch {
+    // Ignore rename failures
+  }
+
+  info(`Memory migrated: ${actions.length} actions, ${feedback.length} directives → ${dim("actions.json")}`);
+}
+
+/** Create empty store files for facts, observations, and relationships.
+ *  Optionally skip actions.json if it was already created. */
+function initializeEmptyStores(workflowName: string, skipActions: boolean = false): void {
+  const dir = workflowDir(workflowName);
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+
+  // actions.json
+  if (!skipActions && !existsSync(workflowActionsPath(workflowName))) {
+    const emptyActions: ActionStore = { actions: [], directives: [], lastConsolidation: null };
+    writeFileSync(workflowActionsPath(workflowName), JSON.stringify(emptyActions, null, 2) + "\n");
+  }
+
+  // facts.json
+  if (!existsSync(workflowFactsPath(workflowName))) {
+    const emptyFacts: FactStore = { facts: [] };
+    writeFileSync(workflowFactsPath(workflowName), JSON.stringify(emptyFacts, null, 2) + "\n");
+  }
+
+  // observations.json
+  if (!existsSync(workflowObservationsPath(workflowName))) {
+    const emptyObs: ObservationStore = { observations: [], summaries: [] };
+    writeFileSync(workflowObservationsPath(workflowName), JSON.stringify(emptyObs, null, 2) + "\n");
+  }
+
+  // relationships.json
+  if (!existsSync(workflowRelationshipsPath(workflowName))) {
+    const emptyRels: RelationshipStore = { accounts: [] };
+    writeFileSync(workflowRelationshipsPath(workflowName), JSON.stringify(emptyRels, null, 2) + "\n");
+  }
+}
+
+// --- Public API ---
+
+/** Ensure all migrations have been applied. Safe to call multiple times.
+ *  Runs two stages:
+ *    1. Legacy flat → workflow directories (if needed)
+ *    2. memory.json → actions.json for each workflow (if needed) */
+export function ensureMigrated(): void {
+  // Stage 1: Legacy flat structure → workflow directories
+  migrateLegacyToWorkflows();
+
+  // Stage 2: memory.json → actions.json for each existing workflow
+  const workflowsDir = getWorkflowsDir();
+  if (!existsSync(workflowsDir)) return;
+
+  const entries = readdirSync(workflowsDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      migrateMemoryToActions(entry.name);
+    }
+  }
 }

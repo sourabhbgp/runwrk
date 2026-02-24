@@ -36,6 +36,26 @@ export function workflowMemoryPath(name: string): string {
   return join(workflowDir(name), "memory.json");
 }
 
+/** Get the actions.json path for a named workflow (raw action log) */
+export function workflowActionsPath(name: string): string {
+  return join(workflowDir(name), "actions.json");
+}
+
+/** Get the facts.json path for a named workflow (extracted knowledge) */
+export function workflowFactsPath(name: string): string {
+  return join(workflowDir(name), "facts.json");
+}
+
+/** Get the observations.json path for a named workflow (session summaries) */
+export function workflowObservationsPath(name: string): string {
+  return join(workflowDir(name), "observations.json");
+}
+
+/** Get the relationships.json path for a named workflow (account CRM) */
+export function workflowRelationshipsPath(name: string): string {
+  return join(workflowDir(name), "relationships.json");
+}
+
 /** Ensure the workflows root directory exists */
 function ensureWorkflowsDir(): void {
   const dir = getWorkflowsDir();

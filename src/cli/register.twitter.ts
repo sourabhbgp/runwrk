@@ -65,6 +65,18 @@ export function registerTwitterCommand(program: Command): void {
       await twitterFeedback({ workflow: opts.workflow });
     });
 
+  // Subcommand: run memory consolidation (extract facts and observations from actions)
+  twitter
+    .command("consolidate")
+    .description("Run memory consolidation (extract facts and observations from actions)")
+    .requiredOption("-w, --workflow <name>", "Workflow to consolidate")
+    .action(async (opts: { workflow: string }) => {
+      const { runManualConsolidation } = await import("../modules/twitter/memory.consolidate");
+      const { ensureMigrated } = await import("../modules/twitter/workflow.migrate");
+      ensureMigrated();
+      await runManualConsolidation(opts.workflow);
+    });
+
   // --- Workflow Management Subcommands ---
   const wfCmd = twitter
     .command("workflow")

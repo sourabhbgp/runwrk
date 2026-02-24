@@ -13,12 +13,33 @@ vi.mock("@/modules/twitter/memory", () => ({
   readMemory: vi.fn(),
 }));
 
-vi.mock("@/modules/twitter/workflow", () => ({
-  listWorkflows: vi.fn(() => []),
-}));
+vi.mock("@/modules/twitter/workflow", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@/modules/twitter/workflow")>();
+  return {
+    ...original,
+    listWorkflows: vi.fn(() => []),
+  };
+});
 
 vi.mock("@/modules/twitter/workflow.migrate", () => ({
   ensureMigrated: vi.fn(),
+}));
+
+// Mock the new memory sub-modules that stats.ts now imports
+vi.mock("@/modules/twitter/memory.actions", () => ({
+  readActionStore: vi.fn(() => ({ actions: [], directives: [], lastConsolidation: null })),
+}));
+
+vi.mock("@/modules/twitter/memory.facts", () => ({
+  readFactStore: vi.fn(() => ({ facts: [] })),
+}));
+
+vi.mock("@/modules/twitter/memory.observations", () => ({
+  readObservationStore: vi.fn(() => ({ observations: [], summaries: [] })),
+}));
+
+vi.mock("@/modules/twitter/memory.relationships", () => ({
+  readRelationshipStore: vi.fn(() => ({ accounts: [] })),
 }));
 
 import { twitterStats } from "@/modules/twitter/stats";

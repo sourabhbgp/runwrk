@@ -2,21 +2,24 @@
  * prompt.ts — System prompt builder for Claude's Twitter engagement behavior.
  *
  * Constructs a detailed system prompt incorporating voice/style guidelines,
- * topics of interest, safety rules, learned skip preferences, blocked accounts,
- * and recent engagement history so Claude improves over time.
+ * topics of interest, safety rules, action bias, blocked accounts, and the
+ * working memory block (facts, observations, relationships, directives, skip patterns).
+ *
  * When a WorkflowConfig is provided, injects strategy, action bias, and
  * workflow-specific topics into the prompt.
  */
 
 import { readConfig } from "./config";
-import { getRecentHistory, getSkipPatterns, getBlockedAccounts, getFeedback } from "./memory";
+import { getWorkingMemoryBlock, getBlockedAccounts } from "./memory";
 import type { WorkflowConfig } from "./workflow.types";
 
 // --- System Prompt ---
 
 /** Build the system prompt that guides Claude's engagement behavior.
  *  When a workflow is provided, adds strategy injection, action bias, and
- *  uses the workflow's topics. Falls back to global config when no workflow. */
+ *  uses the workflow's topics. Falls back to global config when no workflow.
+ *  Injects the working memory block (facts, observations, relationships, etc.)
+ *  instead of raw history/skip/feedback sections. */
 export function buildSystemPrompt(workflow?: WorkflowConfig, workflowName?: string): string {
   // Use workflow topics if available, otherwise fall back to global config
   const config = readConfig();
@@ -26,10 +29,12 @@ export function buildSystemPrompt(workflow?: WorkflowConfig, workflowName?: stri
       ? config.topics.join(", ")
       : "general tech";
 
-  const history = getRecentHistory(8, workflowName);
-  const skipPatterns = getSkipPatterns(30, workflowName);
+  // Build the working memory block — contains performance, facts, observations,
+  // relationships, directives, and skip patterns in a single bounded section
+  const memoryBlock = getWorkingMemoryBlock(workflowName);
+
+  // Blocked accounts from global safety (always included regardless of workflow)
   const blocked = getBlockedAccounts();
-  const feedback = getFeedback(workflowName);
 
   // Build a "Strategy" section from the workflow's strategy prompt
   let strategySection = "";
@@ -50,25 +55,10 @@ export function buildSystemPrompt(workflow?: WorkflowConfig, workflowName?: stri
     actionPreferences += `\n"Heavy" means strongly prefer this action. "Light" means use sparingly.`;
   }
 
-  // Build a "User Directives" section only if there are feedback entries
-  let userDirectives = "";
-  if (feedback.length > 0) {
-    userDirectives = "\n## User Directives\n";
-    userDirectives += feedback.map((entry) => `- ${entry}`).join("\n");
-    userDirectives += "\n\nFollow these directives strictly — they reflect the user's explicit preferences.";
-  }
-
-  // Build a "Learned Preferences" section only if there's data to show
-  let learnedPreferences = "";
-  if (skipPatterns || blocked.length > 0) {
-    learnedPreferences = "\n## Learned Preferences\n";
-    if (skipPatterns) {
-      learnedPreferences += `The user tends to skip these types of tweets:\n${skipPatterns}\n\n`;
-    }
-    if (blocked.length > 0) {
-      learnedPreferences += `Blocked accounts (never engage): ${blocked.map((a) => `@${a}`).join(", ")}\n`;
-    }
-    learnedPreferences += "\nSkip tweets matching these patterns proactively — don't wait for the user to skip them.";
+  // Build blocked accounts section if any exist
+  let blockedSection = "";
+  if (blocked.length > 0) {
+    blockedSection = `\nBlocked accounts (never engage): ${blocked.map((a) => `@${a}`).join(", ")}`;
   }
 
   return `You are managing a Twitter account. Your job is to engage authentically with tweets.
@@ -87,11 +77,10 @@ ${actionPreferences}
 - NEVER be rude, dismissive, or argumentative
 - NEVER engage with controversial political/social topics
 - If a tweet is controversial, inflammatory, or you're unsure, recommend "skip"
-- Prioritize quality over quantity — it's better to skip than post a generic reply
-${userDirectives}${learnedPreferences}
+- Prioritize quality over quantity — it's better to skip than post a generic reply${blockedSection}
 
-## Recent Engagement History
-${history}
+## Memory
+${memoryBlock}
 
 Avoid repeating similar replies. Keep engagement varied and authentic.`;
 }

@@ -9,6 +9,10 @@ import { bold, dim, cyan, green, yellow, divider, info } from "../../common";
 import { readMemory, type TwitterMemory } from "./memory";
 import { listWorkflows } from "./workflow";
 import { ensureMigrated } from "./workflow.migrate";
+import { readFactStore } from "./memory.facts";
+import { readObservationStore } from "./memory.observations";
+import { readRelationshipStore } from "./memory.relationships";
+import { readActionStore } from "./memory.actions";
 
 // --- Helpers ---
 
@@ -99,8 +103,42 @@ function displayWorkflowStats(workflowName: string, mem: TwitterMemory): void {
     }
   }
 
+  // --- Memory System Info ---
+  displayMemorySystemInfo(workflowName);
+
   if (totalDays === 0 && mem.repliedTo.length === 0) {
     info(`No engagement data yet for "${workflowName}". Run \`myteam twitter -w ${workflowName}\` to start.`);
+  }
+}
+
+/** Display memory system metadata — facts, observations, relationships, last consolidation */
+function displayMemorySystemInfo(workflowName: string): void {
+  const actions = readActionStore(workflowName);
+  const facts = readFactStore(workflowName);
+  const observations = readObservationStore(workflowName);
+  const relationships = readRelationshipStore(workflowName);
+
+  // Only show if there's any memory system data
+  const hasData = facts.facts.length > 0 || observations.observations.length > 0 ||
+                  relationships.accounts.length > 0 || actions.lastConsolidation;
+  if (!hasData) return;
+
+  console.log(`\n${bold("Memory System")}`);
+  divider();
+  console.log(`  Facts:          ${green(String(facts.facts.length))}`);
+  console.log(`  Observations:   ${green(String(observations.observations.length))} recent, ${dim(String(observations.summaries.length))} summaries`);
+  console.log(`  Relationships:  ${green(String(relationships.accounts.length))} accounts`);
+
+  const unconsolidated = actions.actions.filter((a) => !a.consolidated).length;
+  if (unconsolidated > 0) {
+    console.log(`  Pending:        ${yellow(String(unconsolidated))} unconsolidated actions`);
+  }
+
+  if (actions.lastConsolidation) {
+    const date = actions.lastConsolidation.slice(0, 10);
+    console.log(`  Last consolidated: ${dim(date)}`);
+  } else {
+    console.log(`  Last consolidated: ${dim("never")}`);
   }
 }
 

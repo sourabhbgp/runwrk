@@ -1,210 +1,297 @@
 /**
- * memory.ts — Persistent engagement history stored per-workflow.
+ * memory.ts — Public API facade for the tiered memory system.
  *
- * When a workflowName is provided, reads/writes from `.myteam/workflows/<name>/memory.json`.
- * Otherwise falls back to the legacy `.myteam/twitter-memory.json` path.
- * Blocked accounts are delegated to the global safety state shared across workflows.
+ * This file preserves every export signature that callers (session.ts, auto.ts,
+ * feed.ts, stats.ts, prompt.ts) already depend on, but delegates internally to
+ * the new storage modules. This means NO caller files need to change their imports.
+ *
+ * Architecture:
+ *   memory.ts (this file — public API, thin wrappers)
+ *     ├── memory.actions.ts    (raw action CRUD)
+ *     ├── memory.facts.ts      (atomic knowledge store)
+ *     ├── memory.observations.ts (session summaries)
+ *     ├── memory.relationships.ts (account CRM)
+ *     ├── memory.working.ts    (prompt context assembler)
+ *     └── memory.consolidate.ts (daily LLM extraction)
+ *
+ * New code should import directly from the specific module when possible.
+ * This facade exists for backward compatibility with existing callers.
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
-import { join, dirname } from "path";
-import { workflowMemoryPath, globalBlockAccount, isGloballyBlocked, readGlobalSafety } from "./workflow";
+import {
+  logAction, hasEngaged, getDailyStats, getSkipPatterns as actionsGetSkipPatterns,
+  getRecentReplies, readActionStore, saveActionStore, getTodayCount,
+} from "./memory.actions";
+import { recordInteraction } from "./memory.relationships";
+import { buildWorkingMemory, formatWorkingMemoryForPrompt } from "./memory.working";
+import { globalBlockAccount, isGloballyBlocked, readGlobalSafety } from "./workflow";
+import type { DayStats } from "./memory.types";
 
-// --- Legacy path (lazy for testability with process.chdir) ---
+// --- Re-export DayStats for stats.ts and any other consumer ---
 
-/** Get the legacy memory path used when no workflow is specified */
-function getLegacyMemoryPath(): string { return join(process.cwd(), ".myteam", "twitter-memory.json"); }
+export type { DayStats };
 
-// --- Types ---
+// --- Legacy TwitterMemory type (used by stats.ts) ---
 
-/** A single engagement action (reply or original post) */
-type ActionEntry = {
-  tweetId: string;
-  userId: string;
-  username: string;
-  date: string;
-  ourReply?: string;
-};
-
-/** Aggregate action counts for a single day */
-type DayStats = {
-  replies: number;
-  likes: number;
-  posts: number;
-  follows: number;
-  retweets: number;
-};
-
-/** Record of a tweet the user or Claude chose to skip */
-type SkipEntry = {
-  username: string;
-  snippet: string;
-  reason: string;
-  date: string;
-};
-
-/** Full persistent memory structure written to disk as JSON */
+/** Legacy memory shape — reconstructed from actions.json for backward compatibility */
 export type TwitterMemory = {
-  repliedTo: ActionEntry[];
+  repliedTo: Array<{ tweetId: string; userId: string; username: string; date: string; ourReply?: string }>;
   liked: string[];
   retweeted: string[];
-  posted: ActionEntry[];
+  posted: Array<{ tweetId: string; userId: string; username: string; date: string; ourReply?: string }>;
   followed: string[];
   dailyStats: Record<string, DayStats>;
-  skipped: SkipEntry[];
+  skipped: Array<{ username: string; snippet: string; reason: string; date: string }>;
   blockedAccounts: string[];
   feedback: string[];
 };
 
-/** Default empty state — used when no memory file exists or on parse failure */
-const EMPTY_MEMORY: TwitterMemory = {
-  repliedTo: [],
-  liked: [],
-  retweeted: [],
-  posted: [],
-  followed: [],
-  dailyStats: {},
-  skipped: [],
-  blockedAccounts: [],
-  feedback: [],
-};
+// --- Backward-Compatible Persistence ---
 
-// --- Path Resolution ---
-
-/** Resolve the memory file path — workflow-scoped when name provided, legacy otherwise */
-function getMemoryPath(workflowName?: string): string {
-  return workflowName ? workflowMemoryPath(workflowName) : getLegacyMemoryPath();
-}
-
-// --- Persistence Helpers ---
-
-/** Ensure the parent directory exists before writing */
-function ensureDir(path: string) {
-  const dir = dirname(path);
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-}
-
-/** Load memory from disk, falling back to empty defaults on any error */
+/** Reconstruct the old TwitterMemory shape from the new actions.json store.
+ *  Used by stats.ts and any code that still expects the legacy format. */
 export function readMemory(workflowName?: string): TwitterMemory {
-  const path = getMemoryPath(workflowName);
-  if (!existsSync(path)) return { ...EMPTY_MEMORY };
-  try {
-    const raw = readFileSync(path, "utf-8");
-    // Spread EMPTY_MEMORY first so any new fields get defaults on old files
-    return { ...EMPTY_MEMORY, ...JSON.parse(raw) };
-  } catch {
-    return { ...EMPTY_MEMORY };
+  if (!workflowName) {
+    // No workflow — return empty memory (legacy path no longer supported)
+    return emptyMemory();
   }
+
+  const store = readActionStore(workflowName);
+  const actions = store.actions;
+
+  // Reconstruct each array from the action log
+  const repliedTo = actions
+    .filter((a) => a.type === "reply")
+    .map((a) => ({
+      tweetId: a.tweetId ?? "",
+      userId: a.userId ?? "",
+      username: a.username ?? "",
+      date: a.date,
+      ourReply: a.text,
+    }));
+
+  const liked = actions
+    .filter((a) => a.type === "like")
+    .map((a) => a.tweetId ?? "");
+
+  const retweeted = actions
+    .filter((a) => a.type === "retweet")
+    .map((a) => a.tweetId ?? "");
+
+  const posted = actions
+    .filter((a) => a.type === "post")
+    .map((a) => ({
+      tweetId: a.tweetId ?? "",
+      userId: "",
+      username: "",
+      date: a.date,
+      ourReply: a.text,
+    }));
+
+  const followed = actions
+    .filter((a) => a.type === "follow")
+    .map((a) => a.userId ?? "");
+
+  const skipped = actions
+    .filter((a) => a.type === "skip")
+    .map((a) => ({
+      username: a.username ?? "",
+      snippet: (a.text ?? "").slice(0, 120),
+      reason: a.reason ?? "",
+      date: a.date,
+    }));
+
+  return {
+    repliedTo,
+    liked,
+    retweeted,
+    posted,
+    followed,
+    dailyStats: getDailyStats(workflowName),
+    skipped,
+    blockedAccounts: readGlobalSafety().blockedAccounts,
+    feedback: store.directives,
+  };
 }
 
-/** Write full memory state to disk as pretty-printed JSON */
+/** Return an empty memory object (for when no workflow is specified) */
+function emptyMemory(): TwitterMemory {
+  return {
+    repliedTo: [],
+    liked: [],
+    retweeted: [],
+    posted: [],
+    followed: [],
+    dailyStats: {},
+    skipped: [],
+    blockedAccounts: readGlobalSafety().blockedAccounts,
+    feedback: [],
+  };
+}
+
+/** Write a TwitterMemory object back to storage (backward-compat for tests).
+ *  Converts the legacy format into an ActionStore and saves to actions.json. */
 export function saveMemory(mem: TwitterMemory, workflowName?: string): void {
-  const path = getMemoryPath(workflowName);
-  ensureDir(path);
-  writeFileSync(path, JSON.stringify(mem, null, 2) + "\n");
-}
+  if (!workflowName) return;
 
-/** Return today's date as YYYY-MM-DD for daily stat bucketing */
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+  // Convert the legacy format into actions
+  const actions: import("./memory.types").Action[] = [];
 
-/** Get or create today's DayStats entry in memory */
-function ensureDayStats(mem: TwitterMemory): DayStats {
-  const key = today();
-  if (!mem.dailyStats[key]) {
-    mem.dailyStats[key] = { replies: 0, likes: 0, posts: 0, follows: 0, retweets: 0 };
+  for (const entry of mem.repliedTo) {
+    actions.push({
+      type: "reply", tweetId: entry.tweetId, userId: entry.userId,
+      username: entry.username, text: entry.ourReply, date: entry.date, consolidated: false,
+    });
   }
-  return mem.dailyStats[key];
+  for (const tweetId of mem.liked) {
+    actions.push({ type: "like", tweetId, date: new Date().toISOString(), consolidated: false });
+  }
+  for (const tweetId of mem.retweeted) {
+    actions.push({ type: "retweet", tweetId, date: new Date().toISOString(), consolidated: false });
+  }
+  for (const entry of mem.posted) {
+    actions.push({
+      type: "post", tweetId: entry.tweetId, text: entry.ourReply,
+      date: entry.date, consolidated: false,
+    });
+  }
+  for (const userId of mem.followed) {
+    actions.push({ type: "follow", userId, date: new Date().toISOString(), consolidated: false });
+  }
+  for (const entry of mem.skipped) {
+    actions.push({
+      type: "skip", username: entry.username, text: entry.snippet,
+      reason: entry.reason, date: entry.date, consolidated: false,
+    });
+  }
+
+  const store: import("./memory.types").ActionStore = {
+    actions,
+    directives: mem.feedback,
+    lastConsolidation: null,
+  };
+
+  saveActionStore(store, workflowName);
 }
 
-// --- Action Logging ---
+// --- Action Logging (delegates to memory.actions + memory.relationships) ---
 
 /** Record that we replied to a specific tweet */
 export function logReply(
   tweetId: string, userId: string, username: string, ourReply: string,
   workflowName?: string,
 ): void {
-  const mem = readMemory(workflowName);
-  mem.repliedTo.push({ tweetId, userId, username, date: new Date().toISOString(), ourReply });
-  ensureDayStats(mem).replies++;
-  saveMemory(mem, workflowName);
+  if (!workflowName) return;
+  logAction({
+    type: "reply",
+    tweetId,
+    userId,
+    username,
+    text: ourReply,
+    date: new Date().toISOString(),
+    consolidated: false,
+  }, workflowName);
+  // Also track the relationship
+  recordInteraction(username, "our-reply", workflowName);
 }
 
 /** Record that we liked a tweet */
 export function logLike(tweetId: string, workflowName?: string): void {
-  const mem = readMemory(workflowName);
-  mem.liked.push(tweetId);
-  ensureDayStats(mem).likes++;
-  saveMemory(mem, workflowName);
+  if (!workflowName) return;
+  logAction({
+    type: "like",
+    tweetId,
+    date: new Date().toISOString(),
+    consolidated: false,
+  }, workflowName);
 }
 
 /** Record that we retweeted a tweet */
 export function logRetweet(tweetId: string, workflowName?: string): void {
-  const mem = readMemory(workflowName);
-  mem.retweeted.push(tweetId);
-  ensureDayStats(mem).retweets++;
-  saveMemory(mem, workflowName);
+  if (!workflowName) return;
+  logAction({
+    type: "retweet",
+    tweetId,
+    date: new Date().toISOString(),
+    consolidated: false,
+  }, workflowName);
 }
 
 /** Record an original post we published */
 export function logPost(tweetId: string, content: string, workflowName?: string): void {
-  const mem = readMemory(workflowName);
-  mem.posted.push({ tweetId, userId: "", username: "", date: new Date().toISOString(), ourReply: content });
-  ensureDayStats(mem).posts++;
-  saveMemory(mem, workflowName);
+  if (!workflowName) return;
+  logAction({
+    type: "post",
+    tweetId,
+    text: content,
+    date: new Date().toISOString(),
+    consolidated: false,
+  }, workflowName);
 }
 
 /** Record that we followed a user */
 export function logFollow(userId: string, workflowName?: string): void {
-  const mem = readMemory(workflowName);
-  mem.followed.push(userId);
-  ensureDayStats(mem).follows++;
-  saveMemory(mem, workflowName);
+  if (!workflowName) return;
+  logAction({
+    type: "follow",
+    userId,
+    date: new Date().toISOString(),
+    consolidated: false,
+  }, workflowName);
+}
+
+// --- Skip Tracking ---
+
+/** Record a skipped tweet with the reason, for learning user preferences */
+export function logSkip(username: string, snippet: string, reason: string, workflowName?: string): void {
+  if (!workflowName) return;
+  logAction({
+    type: "skip",
+    username,
+    text: snippet.slice(0, 120),
+    reason,
+    date: new Date().toISOString(),
+    consolidated: false,
+  }, workflowName);
 }
 
 // --- Duplicate Checks ---
 
 /** Check if we've already replied to a given tweet */
 export function hasRepliedTo(tweetId: string, workflowName?: string): boolean {
-  return readMemory(workflowName).repliedTo.some((r) => r.tweetId === tweetId);
+  if (!workflowName) return false;
+  return hasEngaged("reply", tweetId, workflowName);
 }
 
 /** Check if we've already liked a given tweet */
 export function hasLiked(tweetId: string, workflowName?: string): boolean {
-  return readMemory(workflowName).liked.includes(tweetId);
+  if (!workflowName) return false;
+  return hasEngaged("like", tweetId, workflowName);
 }
 
 // --- Stats Queries ---
 
 /** Get the count of a specific action type for today */
 export function getDailyCount(type: keyof DayStats, workflowName?: string): number {
-  const mem = readMemory(workflowName);
-  const stats = mem.dailyStats[today()];
-  return stats?.[type] ?? 0;
+  if (!workflowName) return 0;
+  return getTodayCount(type, workflowName);
 }
 
 /** Format recent reply history as a readable string for Claude's system prompt */
 export function getRecentHistory(n: number = 10, workflowName?: string): string {
-  const mem = readMemory(workflowName);
-  const recent = mem.repliedTo.slice(-n);
-  if (recent.length === 0) return "No recent engagement history.";
-  return recent
-    .map((r) => `- Replied to @${r.username}: "${r.ourReply?.slice(0, 80)}..."`)
-    .join("\n");
+  if (!workflowName) return "No recent engagement history.";
+  return getRecentReplies(n, workflowName);
 }
 
-// --- Skip Tracking & Learning ---
+// --- Skip Pattern Analysis ---
 
-/** Record a skipped tweet with the reason, for learning user preferences.
- *  Caps at 200 entries to prevent unbounded file growth. */
-export function logSkip(username: string, snippet: string, reason: string, workflowName?: string): void {
-  const mem = readMemory(workflowName);
-  mem.skipped.push({ username, snippet: snippet.slice(0, 120), reason, date: new Date().toISOString() });
-  // Keep last 200 skip entries to avoid unbounded growth
-  if (mem.skipped.length > 200) mem.skipped = mem.skipped.slice(-200);
-  saveMemory(mem, workflowName);
+/** Summarize recent skip reasons into a ranked list for Claude's system prompt */
+export function getSkipPatterns(n: number = 30, workflowName?: string): string {
+  if (!workflowName) return "";
+  return actionsGetSkipPatterns(n, workflowName);
 }
+
+// --- Block Management (delegates to global safety — unchanged) ---
 
 /** Permanently block an account — delegates to global safety state */
 export function blockAccount(username: string): void {
@@ -216,53 +303,45 @@ export function isBlocked(username: string): boolean {
   return isGloballyBlocked(username);
 }
 
-/** Summarize recent skip reasons into a ranked list for Claude's system prompt.
- *  Tallies skip reasons from the last N skips and returns the top 8 by frequency. */
-export function getSkipPatterns(n: number = 30, workflowName?: string): string {
-  const mem = readMemory(workflowName);
-  const recent = mem.skipped.slice(-n);
-  if (recent.length === 0) return "";
-
-  // Tally skip reasons to find recurring patterns
-  const reasonCounts: Record<string, number> = {};
-  for (const skip of recent) {
-    const key = skip.reason.toLowerCase().trim();
-    reasonCounts[key] = (reasonCounts[key] ?? 0) + 1;
-  }
-
-  // Return top reasons sorted by frequency
-  const sorted = Object.entries(reasonCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 8);
-
-  return sorted.map(([reason, count]) => `- ${reason} (${count}x)`).join("\n");
-}
-
 /** Return the full list of blocked account usernames (from global safety) */
 export function getBlockedAccounts(): string[] {
   return readGlobalSafety().blockedAccounts;
 }
 
-// --- User Feedback / Directives ---
+// --- User Feedback / Directives (stored in ActionStore.directives) ---
 
 /** Add a timestamped feedback directive that persists across sessions */
 export function addFeedback(text: string, workflowName?: string): void {
-  const mem = readMemory(workflowName);
+  if (!workflowName) return;
+  const store = readActionStore(workflowName);
   const entry = `[${new Date().toISOString().slice(0, 10)}] ${text}`;
-  mem.feedback.push(entry);
-  saveMemory(mem, workflowName);
+  store.directives.push(entry);
+  saveActionStore(store, workflowName);
 }
 
 /** Return all stored feedback directives */
 export function getFeedback(workflowName?: string): string[] {
-  return readMemory(workflowName).feedback;
+  if (!workflowName) return [];
+  return readActionStore(workflowName).directives;
 }
 
 /** Remove a specific feedback entry by index */
 export function removeFeedback(index: number, workflowName?: string): void {
-  const mem = readMemory(workflowName);
-  if (index >= 0 && index < mem.feedback.length) {
-    mem.feedback.splice(index, 1);
-    saveMemory(mem, workflowName);
+  if (!workflowName) return;
+  const store = readActionStore(workflowName);
+  if (index >= 0 && index < store.directives.length) {
+    store.directives.splice(index, 1);
+    saveActionStore(store, workflowName);
   }
+}
+
+// --- New: Working Memory (for prompt.ts) ---
+
+/** Build and format the working memory block for injection into the system prompt.
+ *  Returns a markdown string with performance, facts, observations, relationships,
+ *  directives, and skip patterns — capped to ~2-3K tokens. */
+export function getWorkingMemoryBlock(workflowName?: string): string {
+  if (!workflowName) return "No memory data yet.";
+  const wm = buildWorkingMemory(workflowName);
+  return formatWorkingMemoryForPrompt(wm);
 }

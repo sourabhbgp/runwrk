@@ -1,8 +1,8 @@
 /**
  * Tests for the system prompt builder — verifies that buildSystemPrompt
  * correctly assembles global config, workflow-specific strategy, action
- * bias, user directives, skip patterns, and blocked accounts into the
- * final Claude system prompt.
+ * bias, blocked accounts, and working memory block into the final
+ * Claude system prompt.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -24,30 +24,25 @@ vi.mock("@/modules/twitter/config", () => ({
 }));
 
 vi.mock("@/modules/twitter/memory", () => ({
-  getRecentHistory: vi.fn(() => "No recent engagement history."),
-  getSkipPatterns: vi.fn(() => ""),
+  getWorkingMemoryBlock: vi.fn(() => "No memory data yet."),
   getBlockedAccounts: vi.fn(() => []),
-  getFeedback: vi.fn(() => []),
 }));
 
 import { buildSystemPrompt } from "@/modules/twitter/prompt";
 import { createMockWorkflowConfig } from "../../helpers/mock-data";
 
 // Import mocked functions so we can override return values in specific tests
-import { getSkipPatterns, getBlockedAccounts, getFeedback } from "@/modules/twitter/memory";
+import { getWorkingMemoryBlock, getBlockedAccounts } from "@/modules/twitter/memory";
 
-const mockGetSkipPatterns = getSkipPatterns as Mock;
+const mockGetWorkingMemoryBlock = getWorkingMemoryBlock as Mock;
 const mockGetBlockedAccounts = getBlockedAccounts as Mock;
-const mockGetFeedback = getFeedback as Mock;
 
 // --- Without Workflow ---
 
 describe("buildSystemPrompt (no workflow)", () => {
   beforeEach(() => {
-    // Reset mocks to defaults before each test
-    mockGetSkipPatterns.mockReturnValue("");
+    mockGetWorkingMemoryBlock.mockReturnValue("No memory data yet.");
     mockGetBlockedAccounts.mockReturnValue([]);
-    mockGetFeedback.mockReturnValue([]);
   });
 
   it("includes global config topics in the prompt", () => {
@@ -73,9 +68,8 @@ describe("buildSystemPrompt (no workflow)", () => {
 
 describe("buildSystemPrompt (with workflow)", () => {
   beforeEach(() => {
-    mockGetSkipPatterns.mockReturnValue("");
+    mockGetWorkingMemoryBlock.mockReturnValue("No memory data yet.");
     mockGetBlockedAccounts.mockReturnValue([]);
-    mockGetFeedback.mockReturnValue([]);
   });
 
   it("uses workflow topics instead of global config topics", () => {
@@ -135,39 +129,38 @@ describe("buildSystemPrompt (with workflow)", () => {
 
 describe("buildSystemPrompt (memory interactions)", () => {
   beforeEach(() => {
-    mockGetSkipPatterns.mockReturnValue("");
+    mockGetWorkingMemoryBlock.mockReturnValue("No memory data yet.");
     mockGetBlockedAccounts.mockReturnValue([]);
-    mockGetFeedback.mockReturnValue([]);
   });
 
-  it("includes User Directives section when feedback entries exist", () => {
-    mockGetFeedback.mockReturnValue([
-      "Always be concise",
-      "Avoid memes",
-    ]);
+  it("includes User Directives section when working memory has directives", () => {
+    mockGetWorkingMemoryBlock.mockReturnValue(
+      "### User Directives\n- Always be concise\n- Avoid memes\n" +
+      "Follow these directives strictly — they reflect the user's explicit preferences.",
+    );
 
     const prompt = buildSystemPrompt();
-    expect(prompt).toContain("## User Directives");
+    expect(prompt).toContain("User Directives");
     expect(prompt).toContain("Always be concise");
     expect(prompt).toContain("Avoid memes");
   });
 
-  it("includes Learned Preferences section when skip patterns exist", () => {
-    mockGetSkipPatterns.mockReturnValue(
-      "crypto/NFT tweets: skipped 5 times\nself-promotion threads: skipped 3 times",
+  it("includes skip patterns when working memory has them", () => {
+    mockGetWorkingMemoryBlock.mockReturnValue(
+      "### Learned Skip Patterns\n- crypto/NFT tweets (5x)\n- self-promotion threads (3x)\n" +
+      "Skip tweets matching these patterns proactively.",
     );
 
     const prompt = buildSystemPrompt();
-    expect(prompt).toContain("## Learned Preferences");
+    expect(prompt).toContain("Skip Patterns");
     expect(prompt).toContain("crypto/NFT tweets");
     expect(prompt).toContain("self-promotion threads");
   });
 
-  it("includes blocked accounts in Learned Preferences when present", () => {
+  it("includes blocked accounts in the prompt when present", () => {
     mockGetBlockedAccounts.mockReturnValue(["spammer42", "scambot99"]);
 
     const prompt = buildSystemPrompt();
-    expect(prompt).toContain("## Learned Preferences");
     expect(prompt).toContain("@spammer42");
     expect(prompt).toContain("@scambot99");
   });

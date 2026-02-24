@@ -51,6 +51,8 @@ Commands:
   stats [options]        View engagement analytics and activity summary
   feedback [options]     Manage persistent agent directives (e.g. 'be funnier',
                          'avoid crypto')
+  consolidate [options]  Run memory consolidation (extract facts and
+                         observations from actions)
   workflow               Manage engagement workflows (campaigns)
 "
 `;
