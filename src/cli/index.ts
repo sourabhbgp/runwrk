@@ -3,6 +3,7 @@ import { Command, Help } from "commander";
 import { registerSetupCommand } from "./register.setup";
 import { registerChatCommand } from "./register.chat";
 import { registerTwitterCommand } from "./register.twitter";
+import { registerScheduleCommand } from "./register.schedule";
 import { bold, dim, cyan, yellow } from "../common/ui";
 
 // --- Custom Help Display ---
@@ -57,6 +58,17 @@ function getHelpText(): string {
         { cmd: "twitter workflow list", desc: "List all workflows" },
         { cmd: "twitter workflow edit -w <n>", desc: "Edit a workflow" },
         { cmd: "twitter workflow delete -w <n>", desc: "Delete a workflow" },
+      ],
+    },
+    {
+      title: "Scheduler",
+      commands: [
+        { cmd: "schedule add", desc: "Add and install a scheduled job" },
+        { cmd: "schedule remove <name>", desc: "Remove a scheduled job" },
+        { cmd: "schedule list", desc: "List all jobs with status" },
+        { cmd: "schedule enable <name>", desc: "Re-enable a paused job" },
+        { cmd: "schedule disable <name>", desc: "Pause a job without removing" },
+        { cmd: "schedule logs <name>", desc: "Show recent output from runs" },
       ],
     },
   ];
@@ -114,6 +126,7 @@ export function buildProgram(): Command {
   registerSetupCommand(program);
   registerChatCommand(program);
   registerTwitterCommand(program);
+  registerScheduleCommand(program);
 
   return program;
 }

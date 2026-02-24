@@ -7,6 +7,7 @@ src/
 │   ├── index.ts              # Builds the program, imports all register.*.ts files
 │   ├── register.setup.ts     # `myteam setup` command
 │   ├── register.chat.ts      # `myteam chat` command
+│   ├── register.schedule.ts  # `myteam schedule` + subcommands (add, remove, list, enable, disable, logs)
 │   └── register.twitter.ts   # `myteam twitter` + subcommands (setup, stats, feedback, workflow, consolidate)
 ├── common/                   # Shared utilities (no feature imports)
 │   ├── ui.ts                 # Terminal formatting (bold, dim, spinner, etc.)
@@ -24,6 +25,8 @@ src/
     │   ├── commands.ts       # Chat slash-command handling
     │   ├── memory.ts         # Chat conversation memory
     │   └── index.ts          # Public API: { chat }
+    ├── scheduler/            # Generic OS-level job scheduler (7 files — see src/modules/scheduler/CLAUDE.md)
+    │   └── index.ts          # Public API: { listJobs, getJob, addJob, removeJob, updateJob, installJob, uninstallJob, ... }
     └── twitter/              # Twitter engagement module (22 files — see src/modules/twitter/CLAUDE.md)
         └── index.ts          # Public API: { twitter, twitterSetup, twitterStats, twitterFeedback, workflowCreate, workflowList, workflowEdit, workflowDelete, runManualConsolidation }
 ```
@@ -115,3 +118,27 @@ tests/
 - Use inline comments for non-obvious logic, edge cases, and "why" explanations — not for restating what the code already says.
 - Add section headers (e.g. `// --- Feed Fetching ---`) to break up long files into logical blocks.
 - Keep comments concise — one line where possible, a short block for complex logic.
+
+# CLAUDE.md Documentation Policy
+
+This project uses **hierarchical CLAUDE.md files** — a root file for universal project info and nested files for module-specific details. Follow these rules when making changes:
+
+## When to Update Root CLAUDE.md (this file)
+
+- **Adding a new module** → add its entry to the Project Structure tree (directory + barrel exports + reference to nested CLAUDE.md).
+- **Adding a new CLI command** → add the `register.*.ts` file to the structure tree.
+- **Changing architecture rules, tech stack, testing conventions, or code standards** → these are universal and belong here.
+- **Keep it concise** — root CLAUDE.md should stay under ~150 lines. If a section grows large, move the detail into a nested file and link to it.
+
+## When to Create/Update a Nested CLAUDE.md (`src/modules/<name>/CLAUDE.md`)
+
+- **Every module with 5+ files** must have its own `CLAUDE.md` explaining internal architecture, storage layout, key concepts, and CLI usage.
+- **Module-specific patterns** (e.g. workflow system, tiered memory, cron conversion) belong in the nested file, not the root.
+- **Adding files or changing behavior within a module** → update that module's CLAUDE.md, not the root (unless the public API barrel changes).
+- Nested CLAUDE.md files are loaded **on-demand** — only when Claude reads files in that subtree. This saves context tokens in unrelated sessions.
+
+## Existing Nested CLAUDE.md Files
+
+- `src/modules/twitter/CLAUDE.md` — workflow system, tiered memory, CLI usage, templates
+- `src/modules/chat/CLAUDE.md` — session management, slash commands, memory
+- `src/modules/scheduler/CLAUDE.md` — OS-level scheduling, platform backends, cron conversion, CLI usage
