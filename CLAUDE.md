@@ -7,7 +7,7 @@ src/
 │   ├── index.ts              # Builds the program, imports all register.*.ts files
 │   ├── register.setup.ts     # `myteam setup` command
 │   ├── register.chat.ts      # `myteam chat` command
-│   └── register.twitter.ts   # `myteam twitter` + subcommands (setup, stats, feedback, workflow)
+│   └── register.twitter.ts   # `myteam twitter` + subcommands (setup, stats, feedback, workflow, consolidate)
 ├── common/                   # Shared utilities (no feature imports)
 │   ├── ui.ts                 # Terminal formatting (bold, dim, spinner, etc.)
 │   ├── env.ts                # .env.local read/write helpers
@@ -28,20 +28,27 @@ src/
         ├── api.ts            # Rettiwt wrapper — all Twitter operations
         ├── feed.ts           # Fetch & organize: mentions, timeline, discovery (workflow-aware)
         ├── agent.ts          # Claude integration — analyze tweets, craft replies (workflow-aware)
-        ├── prompt.ts         # System prompt builder (injects workflow strategy + action bias)
+        ├── prompt.ts         # System prompt builder (injects workflow strategy + working memory)
         ├── session.ts        # Interactive approve/edit/skip loop (requires workflow)
         ├── auto.ts           # Autonomous mode (workflow-aware)
         ├── config.ts         # Read/write .myteam/twitter-config.json + mergedLimits helper
         ├── stats.ts          # Engagement analytics (per-workflow or cross-workflow summary)
-        ├── memory.ts         # Engagement history (workflow-scoped paths, global safety delegation)
+        ├── memory.ts         # Public API facade — thin wrappers delegating to tiered storage modules
+        ├── memory.types.ts   # Type definitions for the tiered memory system
+        ├── memory.actions.ts # Raw action log CRUD (logAction, hasEngaged, getDailyStats)
+        ├── memory.facts.ts   # Atomic knowledge store (add/update/delete facts from consolidation)
+        ├── memory.observations.ts # Session summaries + reflection compression
+        ├── memory.relationships.ts # Per-account CRM (warmth tiers, reciprocity, topics)
+        ├── memory.working.ts # Working memory assembler (~2-3K token prompt block)
+        ├── memory.consolidate.ts # Daily LLM extraction pipeline (actions → facts/observations/relationships)
         ├── feedback.ts       # Persistent agent directives (per-workflow)
         ├── setup.ts          # Credential setup (rettiwt API key)
         ├── workflow.types.ts  # Shared types: WorkflowConfig, GlobalSafetyState, FeedFilters, etc.
-        ├── workflow.ts        # Workflow CRUD + global safety state persistence
+        ├── workflow.ts        # Workflow CRUD + global safety state persistence + path helpers
         ├── workflow.templates.ts # Template factories: follower-growth, hashtag-niche, custom
-        ├── workflow.migrate.ts   # Auto-migration from legacy flat structure to workflows/
+        ├── workflow.migrate.ts   # Two-stage migration: legacy flat → workflows, memory.json → actions.json
         ├── workflow.commands.ts  # Interactive create/list/edit/delete commands
-        └── index.ts          # Public API: { twitter, twitterSetup, twitterStats, twitterFeedback, workflowCreate, workflowList, workflowEdit, workflowDelete }
+        └── index.ts          # Public API: { twitter, twitterSetup, twitterStats, twitterFeedback, workflowCreate, workflowList, workflowEdit, workflowDelete, runManualConsolidation }
 ```
 
 # Architecture Rules
@@ -67,19 +74,40 @@ Workflows are **goal-driven engagement campaigns** with isolated memory, strateg
 └── workflows/                       ← per-workflow directories
     ├── default/                     ← auto-migrated from legacy flat data
     │   ├── workflow.json            ← WorkflowConfig (strategy, filters, limits, etc.)
-    │   └── memory.json             ← engagement history (replies, likes, skips, feedback)
+    │   ├── actions.json            ← raw action log (every reply, like, skip, etc.)
+    │   ├── facts.json              ← atomic knowledge extracted by LLM consolidation
+    │   ├── observations.json       ← session summaries + compressed period summaries
+    │   └── relationships.json      ← per-account CRM data (warmth, reciprocity, topics)
     └── <user-created>/
         ├── workflow.json
-        └── memory.json
+        ├── actions.json
+        ├── facts.json
+        ├── observations.json
+        └── relationships.json
 ```
 
 ## Key Concepts
 
-- **Isolation**: Each workflow has its own `memory.json` — engagement history, skip patterns, and feedback directives never cross-contaminate.
+- **Isolation**: Each workflow has its own tiered memory — action log, facts, observations, and relationships never cross-contaminate.
 - **Global safety**: Blocked accounts and daily post counts are shared across all workflows via `twitter-global.json`.
 - **Templates**: Two built-in templates (`follower-growth`, `hashtag-niche`) plus `custom`. Factories in `workflow.templates.ts`.
-- **Auto-migration**: `ensureMigrated()` in `workflow.migrate.ts` runs at the top of any workflow-aware command. Moves legacy `twitter-memory.json` into `workflows/default/`. Old files renamed to `.backup`.
+- **Auto-migration**: `ensureMigrated()` in `workflow.migrate.ts` runs at the top of any workflow-aware command. Stage 1 moves legacy `twitter-memory.json` into `workflows/default/`. Stage 2 converts `memory.json` into `actions.json` + empty stores. Old files renamed to `.backup`.
 - **Workflow-aware functions**: All memory, prompt, feed, and agent functions accept optional `workflowName?: string` and/or `workflow?: WorkflowConfig` parameters. Without them, they fall back to legacy behavior.
+
+## Tiered Memory System
+
+The memory system has four layers, each backed by a separate JSON file per workflow:
+
+1. **Actions** (`actions.json`) — raw engagement log. Every reply, like, skip is appended as an atomic entry. Source of truth.
+2. **Facts** (`facts.json`) — durable knowledge extracted by LLM consolidation (e.g. "Replies with questions get 3x engagement"). Managed via ADD/UPDATE/DELETE operations. Typically <50 per workflow.
+3. **Observations** (`observations.json`) — session-level summaries from consolidation. When they grow large (~15K tokens), a reflection pass compresses older observations into period summaries.
+4. **Relationships** (`relationships.json`) — per-account CRM. Tracks warmth (cold→warm→hot based on interaction count), reciprocity score, topics, and notes.
+
+**Working Memory**: `memory.working.ts` assembles a bounded ~2-3K token block from all four stores for injection into the system prompt. This keeps prompt size constant regardless of how many sessions have run.
+
+**Consolidation**: `memory.consolidate.ts` runs daily (24h interval, actions must be 12h old). Groups actions into sessions (30-min gap = new session), sends to Claude, applies resulting fact updates, observations, and relationship notes. Can be triggered manually via `myteam twitter consolidate -w <name>`.
+
+**Facade**: `memory.ts` preserves all old export signatures (`logReply`, `hasRepliedTo`, `readMemory`, etc.) but delegates to the new storage modules. No callers (session.ts, auto.ts, feed.ts) needed changes.
 
 ## CLI Usage
 
@@ -93,6 +121,7 @@ myteam twitter workflow delete -w <n> # Delete workflow + history
 myteam twitter stats                  # Summary across all workflows
 myteam twitter stats -w <name>        # Detailed stats for one workflow
 myteam twitter feedback -w <name>     # Manage per-workflow directives
+myteam twitter consolidate -w <name>  # Run memory consolidation manually
 ```
 
 ## Adding a New Workflow Template
