@@ -12,6 +12,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { dirname } from "path";
+import { getLogger } from "../../common";
 import { workflowActionsPath } from "./workflow";
 import type { Action, ActionStore, ActionType, DayStats } from "./memory.types";
 
@@ -44,7 +45,8 @@ export function readActionStore(workflowName: string): ActionStore {
   try {
     const raw = readFileSync(path, "utf-8");
     return { ...EMPTY_STORE, ...JSON.parse(raw) };
-  } catch {
+  } catch (e: unknown) {
+    getLogger().child({ component: "twitter" }).warn({ err: e, path }, "Action store JSON parse failed, resetting");
     return { ...EMPTY_STORE, actions: [], directives: [] };
   }
 }

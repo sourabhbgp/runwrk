@@ -6,7 +6,7 @@
  * All decisions (including skips) are logged to workflow-scoped memory for learning.
  */
 
-import { bold, dim, yellow, success, info, error, spinner } from "../../common";
+import { bold, dim, yellow, success, info, error, spinner, getLogger } from "../../common";
 import { postTweet, likeTweet, retweet, followUser } from "./api";
 import { analyzeTweet } from "./agent";
 import { logReply, logLike, logRetweet, logSkip, logFollow, hasFollowed } from "./memory";
@@ -64,6 +64,8 @@ export async function runAuto(
   workflow?: WorkflowConfig,
   workflowName?: string,
 ) {
+  const log = getLogger().child({ component: "twitter", workflow: workflowName });
+  const sessionStart = Date.now();
   console.log(`${bold(yellow("Auto mode"))} ${dim("\u2014 Claude decides, limits enforced")}\n`);
 
   // Use workflow limits when available, otherwise global config limits
@@ -106,6 +108,7 @@ export async function runAuto(
       spin.stop();
       const msg = e instanceof Error ? e.message : String(e);
       error(`Analysis failed: ${msg}`);
+      log.error({ err: e, tweetId: item.tweet.id, username: item.tweet.username }, "Analysis failed");
       continue;
     }
     spin.stop();
@@ -130,6 +133,7 @@ export async function runAuto(
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         error(`Like failed: ${msg}`);
+        log.error({ err: e, tweetId: item.tweet.id, username: item.tweet.username }, "Like failed");
       }
       continue;
     }
@@ -144,6 +148,7 @@ export async function runAuto(
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         error(`Retweet failed: ${msg}`);
+        log.error({ err: e, tweetId: item.tweet.id, username: item.tweet.username }, "Retweet failed");
       }
       continue;
     }
@@ -186,11 +191,13 @@ export async function runAuto(
           } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : String(e);
             error(`Follow failed: ${msg}`);
+            log.error({ err: e, userId: item.tweet.userId, username: item.tweet.username }, "Follow failed");
           }
         }
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         error(`${action} failed: ${msg}`);
+        log.error({ err: e, action, tweetId: item.tweet.id, username: item.tweet.username }, `${action} failed`);
       }
       continue;
     }
@@ -200,5 +207,6 @@ export async function runAuto(
   }
 
   // --- Session Summary ---
+  log.info({ actions, feedSize: items.length, durationMs: Date.now() - sessionStart }, "Session complete");
   sessionSummary(actions);
 }

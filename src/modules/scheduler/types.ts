@@ -51,6 +51,8 @@ export interface DaemonJobState {
   lastRunAt: string | null;
   /** Exit code of the most recent run, or null if never run */
   lastExitCode: number | null;
+  /** Duration of the most recent run in milliseconds, or null if never run */
+  lastDurationMs: number | null;
   /** Whether the job is currently executing */
   running: boolean;
 }

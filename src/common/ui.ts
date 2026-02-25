@@ -29,6 +29,10 @@ export function error(msg: string) {
   console.error(`${red("✗")} ${msg}`);
 }
 
+export function warn(msg: string) {
+  console.error(`${yellow("⚠")} ${msg}`);
+}
+
 export function info(msg: string) {
   console.log(`${cyan("→")} ${msg}`);
 }

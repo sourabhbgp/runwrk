@@ -105,6 +105,7 @@ describe("getJobState", () => {
       name: "existing",
       lastRunAt: "2025-06-01T00:00:00.000Z",
       lastExitCode: 42,
+      lastDurationMs: null,
       running: true,
     };
 

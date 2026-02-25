@@ -39,6 +39,7 @@ export function getJobState(state: DaemonState, name: string): DaemonJobState {
       name,
       lastRunAt: null,
       lastExitCode: null,
+      lastDurationMs: null,
       running: false,
     };
   }
@@ -49,7 +50,7 @@ export function getJobState(state: DaemonState, name: string): DaemonJobState {
 export function updateJobState(
   state: DaemonState,
   name: string,
-  updates: Partial<Pick<DaemonJobState, "lastRunAt" | "lastExitCode" | "running">>
+  updates: Partial<Pick<DaemonJobState, "lastRunAt" | "lastExitCode" | "lastDurationMs" | "running">>
 ): DaemonState {
   const jobState = getJobState(state, name);
   Object.assign(jobState, updates);

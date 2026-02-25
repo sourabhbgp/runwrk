@@ -1,10 +1,12 @@
 // Daemon backend — in-process timer loop for running scheduled jobs inside Docker.
 // Replaces systemd/launchd when MYTEAM_DAEMON=1. Uses croner for cron expression parsing.
+// All output is structured via pino for Docker log capture and JSONL persistence.
 
 import { spawn } from "child_process";
-import { createWriteStream } from "fs";
+import { createWriteStream, writeFileSync } from "fs";
 import { resolve, join } from "path";
 import { Cron } from "croner";
+import { getLogger } from "../../common";
 import type { ScheduledJob, JobStatus } from "./types";
 import { getJob, listJobs, getLogsDir, ensureSchedulerDir } from "./jobs";
 import {
@@ -24,6 +26,29 @@ export interface DaemonConfig {
   tickIntervalMs?: number;
   /** AbortSignal for graceful shutdown (e.g. from SIGTERM/SIGINT) */
   signal?: AbortSignal;
+}
+
+// --- Health Check ---
+
+/** Path to the daemon health check file (read by Docker HEALTHCHECK) */
+function healthPath(): string {
+  return join(process.cwd(), ".myteam", "daemon-health.json");
+}
+
+/** Write a health check file with current daemon status — read by Docker HEALTHCHECK */
+function writeHealthCheck(status: string, upSince: string, runningJobs: number, enabledJobs: number): void {
+  try {
+    const health = {
+      status,
+      lastTick: new Date().toISOString(),
+      upSince,
+      runningJobs,
+      enabledJobs,
+    };
+    writeFileSync(healthPath(), JSON.stringify(health, null, 2), "utf-8");
+  } catch {
+    // Non-critical — don't crash the daemon over a health file write failure
+  }
 }
 
 // --- Backend Interface (matches launchd/systemd pattern) ---
@@ -97,7 +122,8 @@ export function isJobDue(job: ScheduledJob, lastRunAt: string | null, now: Date)
 }
 
 /** Spawn a job command and stream output to log files. Returns a promise that resolves with exit code. */
-function executeJob(job: ScheduledJob): Promise<number> {
+function executeJob(job: ScheduledJob): Promise<{ exitCode: number; durationMs: number }> {
+  const startTime = Date.now();
   return new Promise((resolvePromise) => {
     ensureSchedulerDir();
     const logDir = getLogsDir();
@@ -125,14 +151,16 @@ function executeJob(job: ScheduledJob): Promise<number> {
     child.on("close", (code) => {
       stdoutLog.end();
       stderrLog.end();
-      resolvePromise(code ?? 1);
+      resolvePromise({ exitCode: code ?? 1, durationMs: Date.now() - startTime });
     });
 
     child.on("error", (err) => {
+      const log = getLogger().child({ component: "daemon", job: job.name });
+      log.error({ err }, "Job spawn error");
       stderrLog.write(`spawn error: ${err.message}\n`);
       stdoutLog.end();
       stderrLog.end();
-      resolvePromise(1);
+      resolvePromise({ exitCode: 1, durationMs: Date.now() - startTime });
     });
   });
 }
@@ -147,13 +175,14 @@ export async function startDaemon(config: DaemonConfig = {}): Promise<void> {
     signal,
   } = config;
 
+  const log = getLogger().child({ component: "daemon" });
+
   // Initialize daemon state with current timestamp
   const state = readDaemonState();
   state.startedAt = new Date().toISOString();
   writeDaemonState(state);
 
-  console.log(`[daemon] Started at ${state.startedAt}`);
-  console.log(`[daemon] Tick interval: ${tickIntervalMs}ms, max concurrent: ${maxConcurrent}`);
+  log.info({ startedAt: state.startedAt, tickIntervalMs, maxConcurrent }, "Started");
 
   // Track currently running job names to enforce concurrency and prevent duplicate runs
   const running = new Set<string>();
@@ -164,12 +193,20 @@ export async function startDaemon(config: DaemonConfig = {}): Promise<void> {
     const currentState = readDaemonState();
     const jobs = listJobs().filter((j) => j.enabled);
 
-    console.log(`[daemon] Tick at ${now.toISOString()} — ${jobs.length} enabled job(s)`);
+    log.info({ enabledJobs: jobs.length }, "Tick");
+
+    // Write health check file for Docker HEALTHCHECK
+    writeHealthCheck("ok", state.startedAt, running.size, jobs.length);
 
     for (const job of jobs) {
-      // Skip if already running or at concurrency limit
+      // Skip if already running
       if (running.has(job.name)) continue;
-      if (running.size >= maxConcurrent) break;
+
+      // Log when concurrency limit prevents a job from starting
+      if (running.size >= maxConcurrent) {
+        log.warn({ job: job.name, running: running.size, maxConcurrent }, "Concurrency limit reached, deferring job");
+        break;
+      }
 
       const jobState = getJobState(currentState, job.name);
       if (!isJobDue(job, jobState.lastRunAt, now)) continue;
@@ -177,18 +214,19 @@ export async function startDaemon(config: DaemonConfig = {}): Promise<void> {
       // Mark as running and execute
       running.add(job.name);
       updateJobState(currentState, job.name, { running: true });
-      console.log(`[daemon] Starting job: ${job.name} (command: ${job.command})`);
+      log.info({ job: job.name, command: job.command }, "Starting job");
 
       // Execute asynchronously — don't block the tick for other jobs
-      executeJob(job).then((exitCode) => {
+      executeJob(job).then(({ exitCode, durationMs }) => {
         running.delete(job.name);
         const freshState = readDaemonState();
         updateJobState(freshState, job.name, {
           lastRunAt: new Date().toISOString(),
           lastExitCode: exitCode,
+          lastDurationMs: durationMs,
           running: false,
         });
-        console.log(`[daemon] Job "${job.name}" finished with exit code ${exitCode}`);
+        log.info({ job: job.name, exitCode, durationMs }, "Job finished");
       });
     }
   }
@@ -215,19 +253,21 @@ export async function startDaemon(config: DaemonConfig = {}): Promise<void> {
     await tick();
   }
 
-  console.log("[daemon] Shutting down gracefully...");
+  log.info("Shutting down gracefully...");
 
   // Wait for running jobs to finish (with a 30s timeout)
   if (running.size > 0) {
-    console.log(`[daemon] Waiting for ${running.size} running job(s) to finish...`);
+    log.info({ runningJobs: running.size }, "Waiting for running jobs to finish...");
     const deadline = Date.now() + 30_000;
     while (running.size > 0 && Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, 500));
     }
     if (running.size > 0) {
-      console.log(`[daemon] Timed out waiting for ${running.size} job(s)`);
+      log.warn({ runningJobs: running.size }, "Timed out waiting for jobs");
     }
   }
 
-  console.log("[daemon] Stopped.");
+  // Write final health status
+  writeHealthCheck("stopped", state.startedAt, 0, 0);
+  log.info("Stopped.");
 }

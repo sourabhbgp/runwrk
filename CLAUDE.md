@@ -11,9 +11,10 @@ src/
 │   ├── register.daemon.ts    # `myteam daemon` command (starts in-process scheduler for Docker)
 │   └── register.twitter.ts   # `myteam twitter` + subcommands (setup, stats, feedback, workflow, consolidate)
 ├── common/                   # Shared utilities (no feature imports)
-│   ├── ui.ts                 # Terminal formatting (bold, dim, spinner, etc.)
+│   ├── ui.ts                 # Terminal formatting (bold, dim, spinner, warn, etc.)
 │   ├── env.ts                # .env.local read/write helpers
 │   ├── timeout.ts            # withTimeout helper & TimeoutError
+│   ├── logger.ts             # Structured logging via pino (createAppLogger, getLogger)
 │   └── index.ts              # Barrel exports
 └── modules/
     ├── auth/                 # LLM authentication module

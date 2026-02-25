@@ -10,6 +10,7 @@ import {
   divider,
   success,
   error,
+  warn,
   info,
 } from "@/common/ui";
 import { stripAnsi } from "../../helpers/strip";
@@ -122,6 +123,22 @@ describe("error", () => {
     const stripped = stripAnsi(output);
     expect(stripped).toContain("✗");
     expect(stripped).toContain("something failed");
+  });
+});
+
+describe("warn", () => {
+  it("calls console.error with warning sign + msg", () => {
+    const errorSpy = vi.spyOn(console, "error");
+
+    warn("watch out");
+
+    expect(errorSpy).toHaveBeenCalled();
+    // Use the last call — Bun's vitest may not fully clear spy history between tests
+    const calls = errorSpy.mock.calls;
+    const output = calls[calls.length - 1][0] as string;
+    const stripped = stripAnsi(output);
+    expect(stripped).toContain("⚠");
+    expect(stripped).toContain("watch out");
   });
 });
 

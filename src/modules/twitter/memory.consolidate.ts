@@ -21,7 +21,7 @@
  */
 
 import { createAnthropicClient } from "../auth";
-import { readEnv, spinner, success, info, error as logError } from "../../common";
+import { readEnv, spinner, success, info, error as logError, getLogger } from "../../common";
 import { readActionStore, getUnconsolidated, markConsolidated } from "./memory.actions";
 import { getTopFacts, readFactStore, applyFactUpdates } from "./memory.facts";
 import { addObservation, needsReflection, compressObservations, readObservationStore } from "./memory.observations";
@@ -220,13 +220,24 @@ export async function runConsolidation(
 
   const responseText = response.content[0].type === "text" ? response.content[0].text : "";
 
+  const log = getLogger().child({ component: "twitter", workflow: workflowName });
+
   let result: ConsolidationResult;
   try {
     result = JSON.parse(responseText.trim());
-  } catch {
+  } catch (e: unknown) {
     logError("Failed to parse consolidation response. Skipping this run.");
+    log.warn({ err: e, responseText: responseText.slice(0, 200) }, "Consolidation parse failed");
     return;
   }
+
+  log.info({
+    sessions: sessions.length,
+    actions: unconsolidated.length,
+    observations: result.observations?.length ?? 0,
+    factUpdates: result.factUpdates?.length ?? 0,
+    relationshipUpdates: result.relationshipUpdates?.length ?? 0,
+  }, "Consolidation complete");
 
   // Step 5: Apply all updates
 
@@ -376,7 +387,9 @@ async function runConsolidationNoAgeFilter(
   let result: ConsolidationResult;
   try {
     result = JSON.parse(responseText.trim());
-  } catch {
+  } catch (e: unknown) {
+    getLogger().child({ component: "twitter", workflow: workflowName })
+      .warn({ err: e, responseText: responseText.slice(0, 200) }, "Consolidation parse failed (manual)");
     throw new Error("Failed to parse consolidation response from Claude.");
   }
 

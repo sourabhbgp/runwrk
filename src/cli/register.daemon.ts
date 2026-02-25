@@ -7,7 +7,11 @@ export function registerDaemonCommand(program: Command): void {
     .description("Start the daemon scheduler (long-running foreground process for Docker)")
     .option("--max-concurrent <n>", "Maximum concurrent jobs", "3")
     .action(async (opts: { maxConcurrent: string }) => {
+      const { createAppLogger, getLogger } = await import("../common");
       const { startDaemon } = await import("../modules/scheduler");
+
+      // Initialize structured logger before daemon starts (async init for file stream)
+      await createAppLogger();
 
       const maxConcurrent = parseInt(opts.maxConcurrent, 10) || 3;
 
@@ -15,7 +19,7 @@ export function registerDaemonCommand(program: Command): void {
       const controller = new AbortController();
 
       const shutdown = () => {
-        console.log("\n[daemon] Received shutdown signal...");
+        getLogger().info({ component: "daemon" }, "Received shutdown signal");
         controller.abort();
       };
 

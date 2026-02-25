@@ -9,6 +9,17 @@ services:
       - .env.local
     environment:
       - MYTEAM_DAEMON=1
+    logging:
+      driver: "local"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "cat", "/app/.myteam/daemon-health.json"]
+      interval: 120s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
 
 volumes:
   myteam-data:

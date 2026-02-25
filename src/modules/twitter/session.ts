@@ -11,7 +11,7 @@
 import { createInterface } from "readline";
 import {
   bold, dim, cyan, yellow,
-  error, info, success, spinner, readEnv, divider,
+  error, info, success, spinner, readEnv, divider, getLogger,
 } from "../../common";
 import { createTwitterClient, postTweet, likeTweet, retweet } from "./api";
 import { readConfig } from "./config";
@@ -65,6 +65,8 @@ export function sessionSummary(actions: Record<string, number>): void {
  *  Validates credentials, loads workflow config, fetches the feed, then loops
  *  through each tweet presenting Claude's suggestion and the action menu. */
 export async function twitter(opts: { manual?: boolean; workflow: string }) {
+  const log = getLogger().child({ component: "twitter", workflow: opts.workflow });
+
   // --- Migration + Workflow Loading ---
   ensureMigrated();
 
@@ -188,6 +190,7 @@ export async function twitter(opts: { manual?: boolean; workflow: string }) {
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         error(`Failed to like: ${msg}`);
+        log.error({ err: e, tweetId: item.tweet.id, username: item.tweet.username }, "Like failed");
       }
       continue;
     }
@@ -202,6 +205,7 @@ export async function twitter(opts: { manual?: boolean; workflow: string }) {
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         error(`Failed to retweet: ${msg}`);
+        log.error({ err: e, tweetId: item.tweet.id, username: item.tweet.username }, "Retweet failed");
       }
       continue;
     }
@@ -244,6 +248,7 @@ export async function twitter(opts: { manual?: boolean; workflow: string }) {
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         error(`Failed to reply: ${msg}`);
+        log.error({ err: e, tweetId: item.tweet.id, username: item.tweet.username }, "Reply failed");
       }
       continue;
     }
@@ -282,6 +287,7 @@ export async function twitter(opts: { manual?: boolean; workflow: string }) {
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         error(`Failed to quote tweet: ${msg}`);
+        log.error({ err: e, tweetId: item.tweet.id, username: item.tweet.username }, "Quote failed");
       }
       continue;
     }
@@ -322,6 +328,7 @@ export async function twitter(opts: { manual?: boolean; workflow: string }) {
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         error(`Failed to post: ${msg}`);
+        log.error({ err: e }, "Post failed");
       }
       continue;
     }

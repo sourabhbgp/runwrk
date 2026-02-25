@@ -10,6 +10,7 @@
 import { searchTweets, getFollowedFeed, getNotifications, getTweetDetails } from "./api";
 import { readConfig, type TwitterConfig } from "./config";
 import { hasRepliedTo, hasLiked, isBlocked } from "./memory";
+import { getLogger } from "../../common";
 import type { WorkflowConfig } from "./workflow.types";
 
 // --- Types ---
@@ -242,7 +243,18 @@ export async function fetchFeed(workflow?: WorkflowConfig, workflowName?: string
     fetchDiscovery(topics, keywords, workflowName, discoveryPriority),
   ]);
 
-  // Collect results from fulfilled promises, silently drop rejected ones
+  // Collect results from fulfilled promises, log rejected ones as warnings
+  const log = getLogger().child({ component: "twitter", workflow: workflowName });
+  if (mentionsResult.status === "rejected") {
+    log.warn({ err: mentionsResult.reason }, "Mentions fetch failed");
+  }
+  if (timelineResult.status === "rejected") {
+    log.warn({ err: timelineResult.reason }, "Timeline fetch failed");
+  }
+  if (discoveryResult.status === "rejected") {
+    log.warn({ err: discoveryResult.reason }, "Discovery fetch failed");
+  }
+
   let mentions = mentionsResult.status === "fulfilled" ? mentionsResult.value : [];
   let timeline = timelineResult.status === "fulfilled" ? timelineResult.value : [];
   let discovery = discoveryResult.status === "fulfilled" ? discoveryResult.value : [];
@@ -301,7 +313,8 @@ export async function fetchThread(tweetId: string): Promise<FeedItem["thread"]> 
       }
     }
     return thread.length > 0 ? thread : undefined;
-  } catch {
+  } catch (e: unknown) {
+    getLogger().child({ component: "twitter" }).warn({ err: e, tweetId }, "Thread fetch failed");
     return undefined;
   }
 }
