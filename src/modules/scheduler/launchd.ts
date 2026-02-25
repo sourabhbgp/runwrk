@@ -1,6 +1,6 @@
 // macOS launchd backend — plist generation and launchctl management
 
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 import type { ScheduledJob, ExecutablePaths } from "./types";
@@ -163,6 +163,8 @@ export function installLaunchd(job: ScheduledJob, paths: ExecutablePaths): void 
   const path = plistPath(job.name);
   const xml = generatePlist(job, paths);
 
+  // Ensure ~/Library/LaunchAgents/ exists (may not on fresh macOS installs)
+  mkdirSync(launchAgentsDir(), { recursive: true });
   writeFileSync(path, xml, "utf-8");
 
   // Load the agent via launchctl bootstrap (modern API, replaces `launchctl load`)
