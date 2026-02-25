@@ -7,15 +7,52 @@
  */
 
 import { bold, dim, yellow, success, info, error, spinner } from "../../common";
-import { postTweet, likeTweet, retweet } from "./api";
+import { postTweet, likeTweet, retweet, followUser } from "./api";
 import { analyzeTweet } from "./agent";
-import { logReply, logLike, logRetweet, logSkip } from "./memory";
+import { logReply, logLike, logRetweet, logSkip, logFollow, hasFollowed } from "./memory";
 import { getGlobalDailyPostCount, incrementGlobalDailyPosts } from "./workflow";
 import type { FeedItem } from "./feed";
 import type { TwitterConfig } from "./config";
-import type { WorkflowConfig } from "./workflow.types";
+import type { WorkflowConfig, WorkflowLimits } from "./workflow.types";
 import { fetchThread } from "./feed";
 import { sessionSummary } from "./session";
+
+// --- Auto-Follow Helpers ---
+
+/** Determine whether to auto-follow the author after a successful reply/quote.
+ *  Rules:
+ *    - Under session follow limit
+ *    - Under 5K followers → always follow
+ *    - 5K-50K followers → follow only if on watchAccounts
+ *    - 50K+ followers → never follow
+ *    - Haven't already followed this user */
+function shouldAutoFollow(
+  item: FeedItem,
+  followsSoFar: number,
+  limits: WorkflowLimits,
+  workflow: WorkflowConfig | undefined,
+  workflowName: string | undefined,
+): boolean {
+  // Session limit check
+  if (followsSoFar >= limits.maxFollowsPerSession) return false;
+
+  // Dedup — skip if we've already followed this user
+  if (hasFollowed(item.tweet.userId, workflowName)) return false;
+
+  const followers = item.tweet.followers;
+
+  // 50K+ → never follow
+  if (followers >= 50_000) return false;
+
+  // 5K-50K → only if on watchAccounts
+  if (followers >= 5_000) {
+    const watchList = workflow?.watchAccounts ?? [];
+    return watchList.includes(item.tweet.username);
+  }
+
+  // Under 5K → always follow (highest follow-back rate)
+  return true;
+}
 
 /** Run the auto engagement loop — Claude decides and acts, limits enforced.
  *  When a workflow is provided, uses its limits and passes strategy to the agent.
@@ -32,7 +69,7 @@ export async function runAuto(
   // Use workflow limits when available, otherwise global config limits
   const limits = workflow?.limits ?? config.limits;
 
-  const actions = { replies: 0, quotes: 0, likes: 0, retweets: 0, skipped: 0 };
+  const actions = { replies: 0, quotes: 0, likes: 0, retweets: 0, follows: 0, skipped: 0 };
   let processed = 0;
 
   for (const item of items) {
@@ -52,7 +89,7 @@ export async function runAuto(
     // Progress logging every 5 processed items so user can see activity
     processed++;
     if (processed % 5 === 0) {
-      console.log(dim(`  [progress] ${processed} analyzed — ${actions.replies} replies, ${actions.quotes} quotes, ${actions.likes} likes, ${actions.skipped} skipped`));
+      console.log(dim(`  [progress] ${processed} analyzed — ${actions.replies} replies, ${actions.quotes} quotes, ${actions.likes} likes, ${actions.follows} follows, ${actions.skipped} skipped`));
     }
 
     // Fetch thread context for mentions so Claude has full conversation
@@ -138,6 +175,18 @@ export async function runAuto(
           incrementGlobalDailyPosts();
           actions.quotes++;
           success(`Quoted @${item.tweet.username}`);
+        }
+        // --- Auto-follow after successful reply/quote ---
+        if (shouldAutoFollow(item, actions.follows, limits, workflow, workflowName)) {
+          try {
+            await followUser(item.tweet.userId, config);
+            logFollow(item.tweet.userId, workflowName);
+            actions.follows++;
+            success(`Followed @${item.tweet.username}`);
+          } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e);
+            error(`Follow failed: ${msg}`);
+          }
         }
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);

@@ -44,6 +44,7 @@ export interface ActionBias {
 export interface WorkflowLimits {
   maxLikesPerSession: number;
   maxRepliesPerSession: number;
+  maxFollowsPerSession: number;
   maxPostsPerDay: number;
   delayBetweenActions: [number, number];
 }

@@ -269,6 +269,13 @@ export function hasLiked(tweetId: string, workflowName?: string): boolean {
   return hasEngaged("like", tweetId, workflowName);
 }
 
+/** Check if we've already followed a given user (by userId) */
+export function hasFollowed(userId: string, workflowName?: string): boolean {
+  if (!workflowName) return false;
+  const store = readActionStore(workflowName);
+  return store.actions.some((a) => a.type === "follow" && a.userId === userId);
+}
+
 // --- Stats Queries ---
 
 /** Get the count of a specific action type for today */

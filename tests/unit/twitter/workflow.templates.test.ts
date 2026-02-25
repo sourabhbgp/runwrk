@@ -38,6 +38,7 @@ describe("createFollowerGrowthWorkflow", () => {
   it("has optimized session limits for high-volume engagement", () => {
     expect(config.limits.maxRepliesPerSession).toBe(17);
     expect(config.limits.maxLikesPerSession).toBe(12);
+    expect(config.limits.maxFollowsPerSession).toBe(3);
     expect(config.limits.maxPostsPerDay).toBe(5);
     expect(config.limits.delayBetweenActions).toEqual([1500, 4000]);
   });

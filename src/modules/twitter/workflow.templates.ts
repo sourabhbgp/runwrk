@@ -13,6 +13,7 @@ import type { WorkflowConfig, WorkflowTemplate } from "./workflow.types";
 const DEFAULT_LIMITS: WorkflowConfig["limits"] = {
   maxLikesPerSession: 12,
   maxRepliesPerSession: 17,
+  maxFollowsPerSession: 3,
   maxPostsPerDay: 5,
   delayBetweenActions: [1500, 4000],
 };

@@ -23,6 +23,7 @@ export type TwitterConfig = {
   limits: {
     maxLikesPerSession: number;
     maxRepliesPerSession: number;
+    maxFollowsPerSession: number;
     maxPostsPerDay: number;
     /** Min/max milliseconds to wait between API actions (randomized) */
     delayBetweenActions: [number, number];
@@ -37,6 +38,7 @@ const DEFAULT_CONFIG: TwitterConfig = {
   limits: {
     maxLikesPerSession: 10,
     maxRepliesPerSession: 5,
+    maxFollowsPerSession: 3,
     maxPostsPerDay: 3,
     delayBetweenActions: [2000, 5000],
   },

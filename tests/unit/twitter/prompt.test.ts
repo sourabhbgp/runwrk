@@ -17,6 +17,7 @@ vi.mock("@/modules/twitter/config", () => ({
     limits: {
       maxLikesPerSession: 10,
       maxRepliesPerSession: 5,
+      maxFollowsPerSession: 3,
       maxPostsPerDay: 3,
       delayBetweenActions: [2000, 5000],
     },

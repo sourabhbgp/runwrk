@@ -33,6 +33,7 @@ describe("readConfig", () => {
     expect(config.limits).toEqual({
       maxLikesPerSession: 10,
       maxRepliesPerSession: 5,
+      maxFollowsPerSession: 3,
       maxPostsPerDay: 3,
       delayBetweenActions: [2000, 5000],
     });
@@ -57,6 +58,7 @@ describe("readConfig", () => {
     expect(config.limits).toEqual({
       maxLikesPerSession: 10,
       maxRepliesPerSession: 5,
+      maxFollowsPerSession: 3,
       maxPostsPerDay: 3,
       delayBetweenActions: [2000, 5000],
     });
@@ -74,6 +76,7 @@ describe("writeConfig", () => {
       limits: {
         maxLikesPerSession: 20,
         maxRepliesPerSession: 8,
+        maxFollowsPerSession: 3,
         maxPostsPerDay: 5,
         delayBetweenActions: [1000, 3000] as [number, number],
       },
@@ -101,6 +104,7 @@ describe("mergedLimits", () => {
       limits: {
         maxLikesPerSession: 15,
         maxRepliesPerSession: 7,
+        maxFollowsPerSession: 3,
         maxPostsPerDay: 4,
         delayBetweenActions: [1500, 4000],
       },
@@ -123,6 +127,7 @@ describe("mergedLimits", () => {
       limits: {
         maxLikesPerSession: 10,
         maxRepliesPerSession: 5,
+        maxFollowsPerSession: 3,
         maxPostsPerDay: 3,
         delayBetweenActions: [2000, 5000],
       },
@@ -133,6 +138,7 @@ describe("mergedLimits", () => {
       limits: {
         maxLikesPerSession: 25,
         maxRepliesPerSession: 12,
+        maxFollowsPerSession: 5,
         maxPostsPerDay: 10,
         delayBetweenActions: [500, 1500],
       },
