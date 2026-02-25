@@ -15,15 +15,24 @@ import {
   isSystemdInstalled,
   getSystemdStatus,
 } from "./systemd";
+import {
+  installDaemon,
+  uninstallDaemon,
+  isDaemonInstalled,
+  getDaemonStatus,
+} from "./daemon";
 import { getLastRunTimestamp } from "./logs";
 
 // --- Platform Detection ---
 
-/** Detect the current platform, throwing on unsupported OS */
+/** Detect the current platform. Returns "daemon" if MYTEAM_DAEMON=1, otherwise OS-based. */
 export function detectPlatform(): Platform {
+  // Daemon mode takes priority — used inside Docker containers
+  if (process.env.MYTEAM_DAEMON === "1") return "daemon";
+
   const p = process.platform;
   if (p === "darwin" || p === "linux") return p;
-  throw new Error(`Unsupported platform: "${p}". Only macOS (launchd) and Linux (systemd) are supported.`);
+  throw new Error(`Unsupported platform: "${p}". Only macOS (launchd), Linux (systemd), or daemon mode (MYTEAM_DAEMON=1) are supported.`);
 }
 
 // --- Executable Paths ---
@@ -43,9 +52,15 @@ export function resolveExecutablePaths(): ExecutablePaths {
 
 // --- Delegated Operations ---
 
-/** Install an OS-level timer for a scheduled job */
+/** Install an OS-level timer for a scheduled job (no-op in daemon mode) */
 export function installJob(job: ScheduledJob): void {
   const platform = detectPlatform();
+
+  if (platform === "daemon") {
+    installDaemon(job);
+    return;
+  }
+
   const paths = resolveExecutablePaths();
 
   if (platform === "darwin") {
@@ -55,9 +70,14 @@ export function installJob(job: ScheduledJob): void {
   }
 }
 
-/** Uninstall the OS-level timer for a job */
+/** Uninstall the OS-level timer for a job (no-op in daemon mode) */
 export function uninstallJob(name: string): void {
   const platform = detectPlatform();
+
+  if (platform === "daemon") {
+    uninstallDaemon(name);
+    return;
+  }
 
   if (platform === "darwin") {
     uninstallLaunchd(name);
@@ -70,11 +90,9 @@ export function uninstallJob(name: string): void {
 export function isInstalled(name: string): boolean {
   const platform = detectPlatform();
 
-  if (platform === "darwin") {
-    return isLaunchdInstalled(name);
-  } else {
-    return isSystemdInstalled(name);
-  }
+  if (platform === "daemon") return isDaemonInstalled(name);
+  if (platform === "darwin") return isLaunchdInstalled(name);
+  return isSystemdInstalled(name);
 }
 
 /** Get the full status of a scheduled job (registry + OS state + logs) */
@@ -88,7 +106,13 @@ export function getJobStatus(name: string): JobStatus | null {
   let lastExitCode: number | null = null;
   let nextRun: string | null = null;
 
-  if (platform === "darwin") {
+  if (platform === "daemon") {
+    const status = getDaemonStatus(name);
+    if (status) {
+      lastExitCode = status.lastExitCode;
+      nextRun = status.nextRun;
+    }
+  } else if (platform === "darwin") {
     const status = getLaunchdStatus(name);
     if (status) {
       lastExitCode = status.lastExitCode;

@@ -2,15 +2,17 @@
 
 ## Overview
 
-Generic OS-level job scheduler — runs any `myteam` CLI command on a cron schedule using native OS timers (launchd on macOS, systemd on Linux). No persistent process needed; missed runs are recovered automatically by both platforms.
+Generic job scheduler — runs any `myteam` CLI command on a cron schedule. Supports three backends: native OS timers (launchd on macOS, systemd on Linux) and an in-process daemon for Docker containers. The backend is selected automatically via `detectPlatform()` (or `MYTEAM_DAEMON=1` env var for daemon mode).
 
 ## Module Structure
 
-- `types.ts` — `ScheduledJob`, `JobStatus`, `Platform`, `ExecutablePaths` interfaces
+- `types.ts` — `ScheduledJob`, `JobStatus`, `Platform`, `ExecutablePaths`, `DaemonJobState`, `DaemonState` interfaces
 - `jobs.ts` — Registry CRUD on `.myteam/scheduler/jobs.json` (add, remove, update, list, get)
-- `platform.ts` — Platform detection (`darwin`/`linux`) and delegation to the correct backend
+- `platform.ts` — Platform detection (`darwin`/`linux`/`daemon`) and delegation to the correct backend
 - `launchd.ts` — macOS backend: plist generation, `cronToCalendarIntervals`, launchctl install/uninstall/status
 - `systemd.ts` — Linux backend: service/timer file generation, `cronToOnCalendar`, systemctl install/uninstall/status
+- `daemon.ts` — Docker/daemon backend: in-process timer loop, `isJobDue`, `startDaemon`, cron via `croner`
+- `daemon-state.ts` — Daemon state persistence: read/write/update `daemon-state.json`
 - `logs.ts` — Read/clear/tail log files from scheduled runs
 - `index.ts` — Public API barrel
 
@@ -20,6 +22,7 @@ Generic OS-level job scheduler — runs any `myteam` CLI command on a cron sched
 .myteam/
 └── scheduler/
     ├── jobs.json                   ← registry of all scheduled jobs
+    ├── daemon-state.json           ← daemon per-job state (lastRunAt, lastExitCode)
     └── logs/
         ├── <name>.stdout.log       ← stdout from scheduled runs
         └── <name>.stderr.log       ← stderr from scheduled runs
@@ -42,6 +45,17 @@ Generic OS-level job scheduler — runs any `myteam` CLI command on a cron sched
 - **Cron conversion**: `cronToOnCalendar()` converts 5-field cron to systemd `OnCalendar` syntax
 - **Missed-run recovery**: `Persistent=true` in timer files
 
+### Docker/Daemon (in-process)
+
+- **Activation**: set `MYTEAM_DAEMON=1` env var (set automatically in Dockerfile)
+- **Install/uninstall**: no-ops — daemon reads `jobs.json` directly on each tick
+- **Tick loop**: `startDaemon()` wakes every 60s, checks which jobs are due via `croner`, spawns `bun run src/index.ts <command>` for each
+- **State**: `daemon-state.json` tracks `lastRunAt` and `lastExitCode` per job
+- **Concurrency**: configurable `maxConcurrent` (default 3), skips already-running jobs
+- **Missed runs**: fires once on restart if a cron window was missed
+- **Shutdown**: listens to AbortSignal (SIGTERM/SIGINT), waits up to 30s for running jobs
+- **CLI**: `myteam daemon` starts the loop as a foreground process; `myteam daemon --max-concurrent 5` overrides concurrency
+
 ## Key Concepts
 
 - **Generic**: The scheduler has no module-specific logic — it runs any CLI command string. Today it schedules Twitter jobs; tomorrow it can schedule anything.
@@ -52,6 +66,8 @@ Generic OS-level job scheduler — runs any `myteam` CLI command on a cron sched
 ## CLI Usage
 
 ```
+myteam daemon                                                   # Start daemon scheduler (Docker)
+myteam daemon --max-concurrent 5                                # Override concurrency limit
 myteam schedule add --name <n> --command <cmd> --cron <expr>   # Add and install a job
 myteam schedule add --name <n> --command <cmd> --cron <expr> --timezone <tz> --description <desc>
 myteam schedule remove <name>                                   # Uninstall and remove

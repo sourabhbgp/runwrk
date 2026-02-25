@@ -81,3 +81,89 @@ Commands:
   help [command]    display help for command
 "
 `;
+
+exports[`CLI help output snapshots root help output matches snapshot 1`] = `
+"
+myteam — AI marketing team for developers
+
+──────────────────────────────────────────────────
+
+  Setup
+    setup                   Configure Anthropic API key
+
+  Chat
+    chat                    Start a task-focused chat session
+      /new                  Clear conversation and start fresh
+      /remember <text>      Save a fact to persistent memory
+      /forget <text>        Remove a memory matching the text
+      /memory               List all saved memories
+      /exit                 Exit the chat (or Ctrl+D)
+
+  Twitter
+    twitter -w <name>       Run engagement workflow (default: auto)
+    twitter -w <name> --manualRun interactive engagement
+    twitter setup           Configure credentials and preferences
+    twitter stats           View all workflow stats
+    twitter stats -w <name> View stats for one workflow
+    twitter feedback -w <name>Manage agent directives
+    twitter workflow create Create a new workflow
+    twitter workflow list   List all workflows
+    twitter workflow edit -w <n>Edit a workflow
+    twitter workflow delete -w <n>Delete a workflow
+
+  Scheduler
+    schedule add            Add and install a scheduled job
+    schedule remove <name>  Remove a scheduled job
+    schedule list           List all jobs with status
+    schedule enable <name>  Re-enable a paused job
+    schedule disable <name> Pause a job without removing
+    schedule logs <name>    Show recent output from runs
+
+  Daemon
+    daemon                  Start daemon scheduler (for Docker)
+      daemon --max-concurrent 5Override concurrency limit
+
+──────────────────────────────────────────────────
+  v1.0.0 · Run myteam <command> --help for details
+"
+`;
+
+exports[`CLI help output snapshots twitter help output matches snapshot 1`] = `
+"Usage: myteam twitter [options] [command]
+
+Twitter engagement tools
+
+Options:
+  --manual               Run in interactive mode (default: auto) (default:
+                         false)
+  -w, --workflow <name>  Workflow to run
+  -h, --help             display help for command
+
+Commands:
+  setup                  Configure Twitter credentials and engagement
+                         preferences
+  stats [options]        View engagement analytics and activity summary
+  feedback [options]     Manage persistent agent directives (e.g. 'be funnier',
+                         'avoid crypto')
+  consolidate [options]  Run memory consolidation (extract facts and
+                         observations from actions)
+  workflow               Manage engagement workflows (campaigns)
+"
+`;
+
+exports[`CLI help output snapshots twitter workflow help output matches snapshot 1`] = `
+"Usage: myteam twitter workflow [options] [command]
+
+Manage engagement workflows (campaigns)
+
+Options:
+  -h, --help        display help for command
+
+Commands:
+  create            Create a new engagement workflow from a template
+  list              List all workflows with template and creation date
+  edit [options]    Edit an existing workflow's configuration
+  delete [options]  Permanently delete a workflow and its engagement history
+  help [command]    display help for command
+"
+`;

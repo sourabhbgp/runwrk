@@ -4,6 +4,7 @@ import { registerSetupCommand } from "./register.setup";
 import { registerChatCommand } from "./register.chat";
 import { registerTwitterCommand } from "./register.twitter";
 import { registerScheduleCommand } from "./register.schedule";
+import { registerDaemonCommand } from "./register.daemon";
 import { bold, dim, cyan, yellow } from "../common/ui";
 
 // --- Custom Help Display ---
@@ -71,6 +72,13 @@ function getHelpText(): string {
         { cmd: "schedule logs <name>", desc: "Show recent output from runs" },
       ],
     },
+    {
+      title: "Daemon",
+      commands: [
+        { cmd: "daemon", desc: "Start daemon scheduler (for Docker)" },
+        { cmd: "daemon --max-concurrent 5", desc: "Override concurrency limit", sub: true },
+      ],
+    },
   ];
 
   // Each section: bold yellow header, then cyan command + dim description rows
@@ -127,6 +135,7 @@ export function buildProgram(): Command {
   registerChatCommand(program);
   registerTwitterCommand(program);
   registerScheduleCommand(program);
+  registerDaemonCommand(program);
 
   return program;
 }

@@ -39,7 +39,29 @@ export interface JobStatus {
 // --- Platform ---
 
 /** Supported platforms for OS-level scheduling */
-export type Platform = "darwin" | "linux";
+export type Platform = "darwin" | "linux" | "daemon";
+
+// --- Daemon State ---
+
+/** Per-job state tracked by the in-process daemon scheduler */
+export interface DaemonJobState {
+  /** Job name (matches ScheduledJob.name) */
+  name: string;
+  /** ISO timestamp of the last completed run, or null if never run */
+  lastRunAt: string | null;
+  /** Exit code of the most recent run, or null if never run */
+  lastExitCode: number | null;
+  /** Whether the job is currently executing */
+  running: boolean;
+}
+
+/** Persisted state for the daemon scheduler */
+export interface DaemonState {
+  /** Per-job state, keyed by job name */
+  jobs: Record<string, DaemonJobState>;
+  /** ISO timestamp of when the daemon was started */
+  startedAt: string;
+}
 
 /** Resolved paths needed to generate OS timer configurations */
 export interface ExecutablePaths {

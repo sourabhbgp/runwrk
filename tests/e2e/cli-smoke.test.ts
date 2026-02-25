@@ -55,4 +55,10 @@ describe("CLI smoke tests (spawned process)", () => {
     expect(exitCode).toBe(0);
     expect(stdout).toContain("API key");
   });
+
+  it("daemon --help exits with code 0 and contains 'daemon'", () => {
+    const { stdout, exitCode } = runCli("daemon --help");
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("daemon");
+  });
 });

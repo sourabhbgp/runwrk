@@ -1,0 +1,8 @@
+node_modules
+.git
+tests
+coverage
+.myteam
+.env.local
+*.tsbuildinfo
+.DS_Store

@@ -1,7 +1,14 @@
 /** Barrel exports for the generic scheduler module */
 
 // Types
-export type { ScheduledJob, JobStatus, Platform, ExecutablePaths } from "./types";
+export type {
+  ScheduledJob,
+  JobStatus,
+  Platform,
+  ExecutablePaths,
+  DaemonJobState,
+  DaemonState,
+} from "./types";
 
 // Job registry CRUD
 export {
@@ -26,3 +33,8 @@ export {
 
 // Log management
 export { readJobLogs, clearJobLogs } from "./logs";
+
+// Daemon backend
+export { startDaemon } from "./daemon";
+export type { DaemonConfig } from "./daemon";
+export { readDaemonState, writeDaemonState } from "./daemon-state";

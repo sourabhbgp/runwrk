@@ -8,6 +8,7 @@ src/
 │   ├── register.setup.ts     # `myteam setup` command
 │   ├── register.chat.ts      # `myteam chat` command
 │   ├── register.schedule.ts  # `myteam schedule` + subcommands (add, remove, list, enable, disable, logs)
+│   ├── register.daemon.ts    # `myteam daemon` command (starts in-process scheduler for Docker)
 │   └── register.twitter.ts   # `myteam twitter` + subcommands (setup, stats, feedback, workflow, consolidate)
 ├── common/                   # Shared utilities (no feature imports)
 │   ├── ui.ts                 # Terminal formatting (bold, dim, spinner, etc.)
@@ -25,8 +26,8 @@ src/
     │   ├── commands.ts       # Chat slash-command handling
     │   ├── memory.ts         # Chat conversation memory
     │   └── index.ts          # Public API: { chat }
-    ├── scheduler/            # Generic OS-level job scheduler (7 files — see src/modules/scheduler/CLAUDE.md)
-    │   └── index.ts          # Public API: { listJobs, getJob, addJob, removeJob, updateJob, installJob, uninstallJob, ... }
+    ├── scheduler/            # Generic job scheduler (9 files — see src/modules/scheduler/CLAUDE.md)
+    │   └── index.ts          # Public API: { listJobs, getJob, addJob, removeJob, updateJob, installJob, uninstallJob, startDaemon, ... }
     └── twitter/              # Twitter engagement module (22 files — see src/modules/twitter/CLAUDE.md)
         └── index.ts          # Public API: { twitter, twitterSetup, twitterStats, twitterFeedback, workflowCreate, workflowList, workflowEdit, workflowDelete, runManualConsolidation }
 ```
@@ -141,4 +142,4 @@ This project uses **hierarchical CLAUDE.md files** — a root file for universal
 
 - `src/modules/twitter/CLAUDE.md` — workflow system, tiered memory, CLI usage, templates
 - `src/modules/chat/CLAUDE.md` — session management, slash commands, memory
-- `src/modules/scheduler/CLAUDE.md` — OS-level scheduling, platform backends, cron conversion, CLI usage
+- `src/modules/scheduler/CLAUDE.md` — OS-level scheduling, daemon backend, platform backends, cron conversion, CLI usage

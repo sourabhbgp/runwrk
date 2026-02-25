@@ -1,0 +1,14 @@
+services:
+  myteam:
+    build: .
+    container_name: myteam-daemon
+    restart: unless-stopped
+    volumes:
+      - myteam-data:/app/.myteam
+    env_file:
+      - .env.local
+    environment:
+      - MYTEAM_DAEMON=1
+
+volumes:
+  myteam-data:
