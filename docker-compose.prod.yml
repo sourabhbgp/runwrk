@@ -5,8 +5,7 @@ services:
     restart: unless-stopped
     volumes:
       - /data/runwrk/data:/app/.runwrk
-    env_file:
-      - .env.local
+      - ./.env.local:/app/.env.local:ro
     environment:
       - RUNWRK_DAEMON=1
       - TZ=Asia/Kolkata
