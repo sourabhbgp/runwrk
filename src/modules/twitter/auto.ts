@@ -6,7 +6,7 @@
  * All decisions (including skips) are logged to workflow-scoped memory for learning.
  */
 
-import { bold, dim, cyan, green, yellow, success, info, error, spinner, divider } from "../../common";
+import { bold, dim, yellow, success, info, error, spinner } from "../../common";
 import { postTweet, likeTweet, retweet } from "./api";
 import { analyzeTweet } from "./agent";
 import { logReply, logLike, logRetweet, logSkip } from "./memory";
@@ -15,6 +15,7 @@ import type { FeedItem } from "./feed";
 import type { TwitterConfig } from "./config";
 import type { WorkflowConfig } from "./workflow.types";
 import { fetchThread } from "./feed";
+import { sessionSummary } from "./session";
 
 /** Run the auto engagement loop — Claude decides and acts, limits enforced.
  *  When a workflow is provided, uses its limits and passes strategy to the agent.
@@ -32,7 +33,6 @@ export async function runAuto(
   const limits = workflow?.limits ?? config.limits;
 
   const actions = { replies: 0, likes: 0, retweets: 0, skipped: 0 };
-  const log: string[] = [];
 
   for (const item of items) {
     // Skip tweets we've already engaged with in a previous session
@@ -71,7 +71,6 @@ export async function runAuto(
     if (action === "skip") {
       logSkip(item.tweet.username, item.tweet.text, analysis.reason, workflowName);
       actions.skipped++;
-      log.push(`${dim("skip")} @${item.tweet.username}: ${analysis.reason}`);
       continue;
     }
 
@@ -82,7 +81,6 @@ export async function runAuto(
         await likeTweet(item.tweet.id, config);
         logLike(item.tweet.id, workflowName);
         actions.likes++;
-        log.push(`${green("like")} @${item.tweet.username}`);
         success(`Liked @${item.tweet.username}`);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
@@ -97,7 +95,6 @@ export async function runAuto(
         await retweet(item.tweet.id, config);
         logRetweet(item.tweet.id, workflowName);
         actions.retweets++;
-        log.push(`${green("RT")} @${item.tweet.username}`);
         success(`Retweeted @${item.tweet.username}`);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
@@ -124,13 +121,11 @@ export async function runAuto(
         if (action === "reply") {
           await postTweet(analysis.draft, { replyTo: item.tweet.id }, config);
           logReply(item.tweet.id, item.tweet.userId, item.tweet.username, analysis.draft, workflowName);
-          log.push(`${green("reply")} @${item.tweet.username}: ${dim(analysis.draft.slice(0, 60))}`);
           success(`Replied to @${item.tweet.username}`);
         } else {
           await postTweet(analysis.draft, { quote: item.tweet.id }, config);
           logReply(item.tweet.id, item.tweet.userId, item.tweet.username, `[QT] ${analysis.draft}`, workflowName);
           incrementGlobalDailyPosts();
-          log.push(`${green("quote")} @${item.tweet.username}: ${dim(analysis.draft.slice(0, 60))}`);
           success(`Quoted @${item.tweet.username}`);
         }
         actions.replies++;
@@ -146,20 +141,5 @@ export async function runAuto(
   }
 
   // --- Session Summary ---
-  console.log(`\n${bold(cyan("Auto Session Summary"))}`);
-  divider();
-  console.log(`  ${green(String(actions.replies))} replies`);
-  console.log(`  ${green(String(actions.likes))} likes`);
-  console.log(`  ${green(String(actions.retweets))} retweets`);
-  console.log(`  ${dim(String(actions.skipped))} skipped`);
-  divider();
-
-  // Print detailed action log if any actions were taken
-  if (log.length > 0) {
-    console.log(`\n${bold("Action Log:")}`);
-    for (const entry of log) {
-      console.log(`  ${entry}`);
-    }
-    console.log();
-  }
+  sessionSummary(actions);
 }

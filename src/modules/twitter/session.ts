@@ -10,7 +10,7 @@
 
 import { createInterface } from "readline";
 import {
-  bold, dim, cyan, yellow, green, red,
+  bold, dim, cyan, yellow,
   error, info, success, spinner, readEnv, divider,
 } from "../../common";
 import { createTwitterClient, postTweet, likeTweet, retweet } from "./api";
@@ -48,20 +48,15 @@ function formatTweet(item: FeedItem): string {
   return `${badge} ${bold(`@${item.tweet.username}`)} ${stats}${engaged}\n${item.tweet.text}`;
 }
 
-/** Print a summary of all actions taken during the session */
-function sessionSummary(actions: Record<string, number>): void {
-  console.log(`\n${bold(cyan("Session Summary"))}`);
-  divider();
-  const entries = Object.entries(actions).filter(([, v]) => v > 0);
-  if (entries.length === 0) {
-    console.log(dim("  No actions taken."));
-  } else {
-    for (const [action, count] of entries) {
-      console.log(`  ${green(String(count))} ${action}`);
-    }
-  }
-  divider();
-  console.log();
+/** Print a minimal one-line summary of all actions taken during the session */
+export function sessionSummary(actions: Record<string, number>): void {
+  // Filter to non-zero counts, excluding "skipped" since it's not user-facing
+  const parts = Object.entries(actions)
+    .filter(([key, v]) => v > 0 && key !== "skipped")
+    .map(([key, v]) => `${v} ${key}`);
+
+  const summary = parts.length > 0 ? parts.join(", ") : "no actions taken";
+  console.log(`\n${dim("Session complete:")} ${summary}`);
 }
 
 // --- Main Session ---
