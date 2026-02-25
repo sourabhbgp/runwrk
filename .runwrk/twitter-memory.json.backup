@@ -1,0 +1,204 @@
+{
+  "repliedTo": [
+    {
+      "tweetId": "2023041859623227673",
+      "userId": "945817135816654848",
+      "username": "TrungTPhan",
+      "date": "2026-02-15T18:47:10.922Z",
+      "ourReply": "When you're Jony Ive, the website *is* the portfolio. The bear animation says \"we prioritize craft over conversion\" - which is exactly the client filter they want. If you need pricing upfront, you're probably not the client they're looking for."
+    },
+    {
+      "tweetId": "2023081999611687353",
+      "userId": "633549366",
+      "username": "Dan_Jeffries1",
+      "date": "2026-02-15T18:47:20.488Z",
+      "ourReply": "The coordination tax is real. AI can optimize individual tasks but the meta-problem of \"which tasks, in what order, with which tradeoffs\" still requires human judgment. The feedback loops are just messier outside of code."
+    },
+    {
+      "tweetId": "2023055229218926711",
+      "userId": "25401953",
+      "username": "steipete",
+      "date": "2026-02-15T18:47:51.289Z",
+      "ourReply": "\"Revolutionary\" and \"paradigm shift\" deserve honorary mentions in that filter too. The buzzword-to-substance ratio is getting wild out here."
+    }
+  ],
+  "liked": [],
+  "retweeted": [],
+  "posted": [],
+  "followed": [],
+  "dailyStats": {
+    "2026-02-15": {
+      "replies": 3,
+      "likes": 0,
+      "posts": 0,
+      "follows": 0,
+      "retweets": 0
+    }
+  },
+  "skipped": [
+    {
+      "username": "unknown",
+      "snippet": "",
+      "reason": "The tweet content is empty or not provided, making it impossible to craft an authentic, relevant response. Cannot engage meaningfully without knowing what was said.",
+      "date": "2026-02-15T18:45:46.753Z"
+    },
+    {
+      "username": "unknown",
+      "snippet": "",
+      "reason": "Tweet content is empty - cannot craft an authentic response without knowing what was said. Matches learned preference to skip when content is missing.",
+      "date": "2026-02-15T18:45:50.249Z"
+    },
+    {
+      "username": "unknown",
+      "snippet": "",
+      "reason": "tweet content is empty - cannot craft an authentic response without knowing what was said. matches learned preference to skip when content is missing.",
+      "date": "2026-02-15T18:45:53.630Z"
+    },
+    {
+      "username": "unknown",
+      "snippet": "",
+      "reason": "tweet content is empty - cannot craft an authentic response without knowing what was said. matches learned preference to skip when content is missing.",
+      "date": "2026-02-15T18:45:57.267Z"
+    },
+    {
+      "username": "unknown",
+      "snippet": "",
+      "reason": "tweet content is empty - cannot craft an authentic response without knowing what was said. matches learned preference to skip when content is missing.",
+      "date": "2026-02-15T18:46:00.897Z"
+    },
+    {
+      "username": "unknown",
+      "snippet": "",
+      "reason": "tweet content is empty - cannot craft an authentic response without knowing what was said, matches learned preference to skip when content is missing",
+      "date": "2026-02-15T18:46:04.176Z"
+    },
+    {
+      "username": "unknown",
+      "snippet": "",
+      "reason": "tweet content is empty - cannot craft an authentic response without knowing what was said, matches learned preference to skip when content is missing",
+      "date": "2026-02-15T18:46:08.169Z"
+    },
+    {
+      "username": "unknown",
+      "snippet": "",
+      "reason": "tweet content is empty - cannot craft an authentic response without knowing what was said, matches learned preference to skip when content is missing",
+      "date": "2026-02-15T18:46:11.444Z"
+    },
+    {
+      "username": "unknown",
+      "snippet": "",
+      "reason": "tweet content is empty - cannot craft an authentic response without knowing what was said, matches learned preference to skip when content is missing",
+      "date": "2026-02-15T18:46:14.619Z"
+    },
+    {
+      "username": "unknown",
+      "snippet": "",
+      "reason": "tweet content is empty - cannot craft an authentic response without knowing what was said, matches learned preference to skip when content is missing",
+      "date": "2026-02-15T18:46:18.022Z"
+    },
+    {
+      "username": "unknown",
+      "snippet": "",
+      "reason": "tweet content is empty - cannot craft an authentic response without knowing what was said, matches learned preference to skip when content is missing",
+      "date": "2026-02-15T18:46:21.481Z"
+    },
+    {
+      "username": "unknown",
+      "snippet": "",
+      "reason": "tweet content is empty - cannot craft an authentic response without knowing what was said, matches learned preference to skip when content is missing",
+      "date": "2026-02-15T18:46:24.233Z"
+    },
+    {
+      "username": "unknown",
+      "snippet": "",
+      "reason": "tweet content is empty - cannot craft an authentic response without knowing what was said, matches learned preference to skip when content is missing",
+      "date": "2026-02-15T18:46:27.792Z"
+    },
+    {
+      "username": "unknown",
+      "snippet": "",
+      "reason": "tweet content is empty - cannot craft an authentic response without knowing what was said, matches learned preference to skip when content is missing",
+      "date": "2026-02-15T18:46:31.107Z"
+    },
+    {
+      "username": "unknown",
+      "snippet": "",
+      "reason": "tweet content is empty - cannot craft an authentic response without knowing what was said, matches learned preference to skip when content is missing",
+      "date": "2026-02-15T18:46:35.740Z"
+    },
+    {
+      "username": "unknown",
+      "snippet": "",
+      "reason": "tweet content is empty - cannot craft an authentic response without knowing what was said, matches learned preference to skip when content is missing",
+      "date": "2026-02-15T18:46:39.014Z"
+    },
+    {
+      "username": "unknown",
+      "snippet": "",
+      "reason": "tweet content is empty - cannot craft an authentic response without knowing what was said, matches learned preference to skip when content is missing",
+      "date": "2026-02-15T18:46:42.344Z"
+    },
+    {
+      "username": "unknown",
+      "snippet": "",
+      "reason": "tweet content is empty - cannot craft an authentic response without knowing what was said, matches learned preference to skip when content is missing",
+      "date": "2026-02-15T18:46:46.264Z"
+    },
+    {
+      "username": "unknown",
+      "snippet": "",
+      "reason": "tweet content is empty - cannot craft an authentic response without knowing what was said, matches learned preference to skip when content is missing",
+      "date": "2026-02-15T18:46:49.641Z"
+    },
+    {
+      "username": "unknown",
+      "snippet": "",
+      "reason": "tweet content is empty - cannot craft an authentic response without knowing what was said, matches learned preference to skip when content is missing",
+      "date": "2026-02-15T18:46:53.225Z"
+    },
+    {
+      "username": "AIatAMD",
+      "snippet": "Calling all devs! Have you joined the AMD AI Developer Program yet? You bring the ideas, we’ll bring the $100 in cloud c",
+      "reason": "This is a promotional tweet from AMD's official AI account advertising their developer program. Engaging with this would feel like endorsing/promoting their program rather than authentic conversation. It's a corporate announcement, not a discussion starter.",
+      "date": "2026-02-15T18:46:56.604Z"
+    },
+    {
+      "username": "TheMuthootGroup",
+      "snippet": "Get an instant gold loan at maximum value for your gold from Muthoot Finance in one visit with minimum documentation or ",
+      "reason": "this is a promotional tweet advertising financial services (gold loans). engaging would appear as endorsing/promoting their lending product. not relevant to ai topics and purely commercial in nature.",
+      "date": "2026-02-15T18:46:59.681Z"
+    },
+    {
+      "username": "Pirat_Nation",
+      "snippet": "Sophie Turner says Lara Croft is no \"sex bombshell\" in new Tomb Raider show\n\n“It’s about her and her story and what driv",
+      "reason": "This is entertainment/casting news about Tomb Raider that touches on gender representation - outside AI topics and potentially controversial given the high reply count (411 replies) which often signals heated debate. Not relevant to our focus areas and could veer into sensitive territory.",
+      "date": "2026-02-15T18:47:24.217Z"
+    },
+    {
+      "username": "JM_Scindia",
+      "snippet": "Another fabulous win for the Men in Blue, our champions! 🇮🇳 \n\nIshan Kishan rose to the occasion with a truly special k",
+      "reason": "This is a cricket/sports tweet celebrating an India vs Pakistan match - completely outside our AI focus area. Sports nationalism and India-Pakistan matches can be particularly sensitive topics with heated fan debates (visible in the high engagement). Not relevant to our expertise and potentially controversial.",
+      "date": "2026-02-15T18:47:27.532Z"
+    },
+    {
+      "username": "CoinStats",
+      "snippet": "Track everything @Starknet on @CoinStats! 🕵️‍♂️\n\nGet detailed analytics on your Starknet performance alongside your ent",
+      "reason": "This is a promotional tweet advertising CoinStats' Starknet tracking features - purely commercial/marketing content outside AI topics. Engaging would appear as endorsing their crypto analytics product rather than authentic conversation.",
+      "date": "2026-02-15T18:47:30.704Z"
+    },
+    {
+      "username": "Pirat_Nation",
+      "snippet": "Young gamers in Japan are growing up with far less connection to Final Fantasy and Dragon Quest than previous generation",
+      "reason": "This tweet is about gaming industry trends and Japanese RPG franchises - outside our AI focus area. While interesting, it's about game development cycles and generational preferences in gaming, not related to AI topics we engage with.",
+      "date": "2026-02-15T18:47:54.258Z"
+    },
+    {
+      "username": "ndtv",
+      "snippet": "\"We Invite Whole World's Data To India\": PM Modi Ahead Of Big AI Summit\nhttps://t.co/jLxcG2QMDH https://t.co/Jhz4PKOVt1",
+      "reason": "This is a political tweet from India's PM about an AI summit that could attract polarized responses given the geopolitical nature. The invitation to 'whole world's data' to India touches on data sovereignty, which is a sensitive topic. With only 5 replies but from a major news outlet, engaging risks appearing to endorse specific government policies rather than having an authentic tech conversation.",
+      "date": "2026-02-15T18:48:11.155Z"
+    }
+  ],
+  "blockedAccounts": [],
+  "feedback": []
+}
