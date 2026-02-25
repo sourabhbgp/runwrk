@@ -13,7 +13,7 @@ export const yellow = wrap("33", "39");
 
 export function banner() {
   console.log(
-    `\n${bold(cyan("myteam"))} ${dim("— AI marketing team for developers")}\n`
+    `\n${bold(cyan("runwrk"))} ${dim("— AI marketing team for developers")}\n`
   );
 }
 

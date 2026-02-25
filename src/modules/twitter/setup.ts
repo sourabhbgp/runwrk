@@ -1,5 +1,5 @@
 /**
- * setup.ts — Interactive Twitter credential setup (the `myteam twitter setup` command).
+ * setup.ts — Interactive Twitter credential setup (the `runwrk twitter setup` command).
  *
  * Walks the user through entering their rettiwt API key (base64 cookie string),
  * verifies the connection, and configures engagement topics/keywords/accounts.
@@ -85,7 +85,7 @@ export async function twitterSetup() {
   }
 
   writeConfig(config);
-  success("Config saved to .myteam/twitter-config.json");
+  success("Config saved to .runwrk/twitter-config.json");
 
-  console.log(`\n${dim("Run")} ${bold("myteam twitter")} ${dim("to start an engagement session.")}\n`);
+  console.log(`\n${dim("Run")} ${bold("runwrk twitter")} ${dim("to start an engagement session.")}\n`);
 }

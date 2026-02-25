@@ -1,4 +1,4 @@
-/** Registers the `myteam schedule` command and its subcommands */
+/** Registers the `runwrk schedule` command and its subcommands */
 import type { Command } from "commander";
 
 export function registerScheduleCommand(program: Command): void {
@@ -6,7 +6,7 @@ export function registerScheduleCommand(program: Command): void {
     .command("schedule")
     .description("Manage scheduled jobs (OS-level timers)");
 
-  // Show help when `myteam schedule` is run without a subcommand
+  // Show help when `runwrk schedule` is run without a subcommand
   schedule.action(() => {
     schedule.outputHelp();
   });
@@ -16,7 +16,7 @@ export function registerScheduleCommand(program: Command): void {
     .command("add")
     .description("Add and install a new scheduled job")
     .requiredOption("--name <name>", "Unique job identifier")
-    .requiredOption("--command <cmd>", "myteam command to run (e.g. \"twitter -w growth\")")
+    .requiredOption("--command <cmd>", "runwrk command to run (e.g. \"twitter -w growth\")")
     .requiredOption("--cron <expr>", "Cron expression (e.g. \"0 9,14,20 * * *\")")
     .option("--timezone <tz>", "IANA timezone (default: system)")
     .option("--description <desc>", "Human-readable description")
@@ -44,7 +44,7 @@ export function registerScheduleCommand(program: Command): void {
         installJob(job);
 
         success(`Job "${job.name}" created and installed.`);
-        info(`Command: myteam ${job.command}`);
+        info(`Command: runwrk ${job.command}`);
         info(`Schedule: ${job.cron}`);
         if (job.timezone) info(`Timezone: ${job.timezone}`);
       } catch (e) {
@@ -88,7 +88,7 @@ export function registerScheduleCommand(program: Command): void {
       const jobs = listJobs();
 
       if (jobs.length === 0) {
-        console.log(dim("\n  No scheduled jobs. Use `myteam schedule add` to create one.\n"));
+        console.log(dim("\n  No scheduled jobs. Use `runwrk schedule add` to create one.\n"));
         return;
       }
 
@@ -103,7 +103,7 @@ export function registerScheduleCommand(program: Command): void {
             : red("not installed");
 
         console.log(`  ${bold(cyan(job.name))}  ${dim("—")}  ${stateLabel}`);
-        console.log(`    ${dim("Command:")}  myteam ${job.command}`);
+        console.log(`    ${dim("Command:")}  runwrk ${job.command}`);
         console.log(`    ${dim("Cron:")}     ${job.cron}`);
         if (status?.lastRun) {
           console.log(`    ${dim("Last run:")} ${status.lastRun}`);
@@ -166,7 +166,7 @@ export function registerScheduleCommand(program: Command): void {
       try {
         uninstallJob(name);
         updateJob(name, { enabled: false });
-        success(`Job "${name}" paused. Use \`myteam schedule enable ${name}\` to resume.`);
+        success(`Job "${name}" paused. Use \`runwrk schedule enable ${name}\` to resume.`);
       } catch (e) {
         err((e as Error).message);
         process.exit(1);

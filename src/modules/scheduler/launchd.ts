@@ -14,7 +14,7 @@ function launchAgentsDir(): string {
 
 /** Label used for the launchd job (matches plist filename) */
 export function jobLabel(name: string): string {
-  return `com.myteam.${name}`;
+  return `com.runwrk.${name}`;
 }
 
 /** Full path to the plist file for a given job */

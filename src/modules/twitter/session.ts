@@ -1,5 +1,5 @@
 /**
- * session.ts — Interactive engagement session (the main `myteam twitter` command).
+ * session.ts — Interactive engagement session (the main `runwrk twitter` command).
  *
  * Fetches the feed, presents each tweet to the user with Claude's analysis,
  * and provides an action menu: reply, like, quote, retweet, skip, block, post, or exit.
@@ -77,18 +77,18 @@ export async function twitter(opts: { manual?: boolean; workflow: string }) {
   const env = readEnv();
   const apiKey = env.TWITTER_API_KEY;
   if (!apiKey) {
-    error("No Twitter API key. Run `myteam twitter setup` first.");
+    error("No Twitter API key. Run `runwrk twitter setup` first.");
     process.exit(1);
   }
   const anthropicKey = env.ANTHROPIC_API_KEY;
   if (!anthropicKey) {
-    error("No Anthropic API key. Run `myteam setup` first.");
+    error("No Anthropic API key. Run `runwrk setup` first.");
     process.exit(1);
   }
 
   createTwitterClient(apiKey);
 
-  console.log(`\n${bold(cyan("myteam twitter"))} ${dim(`\u2014 ${workflowName} workflow`)}\n`);
+  console.log(`\n${bold(cyan("runwrk twitter"))} ${dim(`\u2014 ${workflowName} workflow`)}\n`);
 
   // --- Feed Loading ---
   const spin = spinner("Fetching feed...");

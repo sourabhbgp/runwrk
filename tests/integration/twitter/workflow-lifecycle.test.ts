@@ -2,7 +2,7 @@
  * workflow-lifecycle.test.ts — End-to-end CRUD tests for the workflow system.
  *
  * Runs against real filesystem in isolated temp directories. Each test gets
- * a fresh workspace with .myteam/workflows/ structure via createTestWorkspace.
+ * a fresh workspace with .runwrk/workflows/ structure via createTestWorkspace.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";

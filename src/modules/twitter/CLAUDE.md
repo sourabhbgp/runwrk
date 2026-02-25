@@ -7,7 +7,7 @@ Workflows are **goal-driven engagement campaigns** with isolated memory, strateg
 ### Storage Layout
 
 ```
-.myteam/
+.runwrk/
 ├── twitter-config.json              ← global (API setup, default limits) — unchanged
 ├── twitter-global.json              ← shared safety state (blocked accounts, daily post counts)
 └── workflows/                       ← per-workflow directories
@@ -44,7 +44,7 @@ The memory system has four layers, each backed by a separate JSON file per workf
 
 **Working Memory**: `memory.working.ts` assembles a bounded ~2-3K token block from all four stores for injection into the system prompt. This keeps prompt size constant regardless of how many sessions have run.
 
-**Consolidation**: `memory.consolidate.ts` runs daily (24h interval, actions must be 12h old). Groups actions into sessions (30-min gap = new session), sends to Claude, applies resulting fact updates, observations, and relationship notes. Can be triggered manually via `myteam twitter consolidate -w <name>`.
+**Consolidation**: `memory.consolidate.ts` runs daily (24h interval, actions must be 12h old). Groups actions into sessions (30-min gap = new session), sends to Claude, applies resulting fact updates, observations, and relationship notes. Can be triggered manually via `runwrk twitter consolidate -w <name>`.
 
 **Facade**: `memory.ts` preserves all old export signatures (`logReply`, `hasRepliedTo`, `readMemory`, etc.) but delegates to the new storage modules. No callers (session.ts, auto.ts, feed.ts) needed changes.
 
@@ -62,16 +62,16 @@ The memory system has four layers, each backed by a separate JSON file per workf
 ## CLI Usage
 
 ```
-myteam twitter -w <name>              # Run workflow (auto mode)
-myteam twitter -w <name> --manual     # Run workflow (interactive)
-myteam twitter workflow create        # Interactive guided setup
-myteam twitter workflow list          # List all workflows
-myteam twitter workflow edit -w <n>   # Edit workflow config
-myteam twitter workflow delete -w <n> # Delete workflow + history
-myteam twitter stats                  # Summary across all workflows
-myteam twitter stats -w <name>        # Detailed stats for one workflow
-myteam twitter feedback -w <name>     # Manage per-workflow directives
-myteam twitter consolidate -w <name>  # Run memory consolidation manually
+runwrk twitter -w <name>              # Run workflow (auto mode)
+runwrk twitter -w <name> --manual     # Run workflow (interactive)
+runwrk twitter workflow create        # Interactive guided setup
+runwrk twitter workflow list          # List all workflows
+runwrk twitter workflow edit -w <n>   # Edit workflow config
+runwrk twitter workflow delete -w <n> # Delete workflow + history
+runwrk twitter stats                  # Summary across all workflows
+runwrk twitter stats -w <name>        # Detailed stats for one workflow
+runwrk twitter feedback -w <name>     # Manage per-workflow directives
+runwrk twitter consolidate -w <name>  # Run memory consolidation manually
 ```
 
 ## Adding a New Workflow Template

@@ -11,21 +11,21 @@ import { createTestProgram } from "../../helpers/program-factory";
 import { stripAnsi } from "../../helpers/strip";
 
 describe("CLI command routing", () => {
-  it("myteam --help outputs root help text", async () => {
+  it("runwrk --help outputs root help text", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "--help"]);
+      await program.parseAsync(["node", "runwrk", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
     }
-    expect(stripAnsi(output.stdout)).toContain("myteam");
+    expect(stripAnsi(output.stdout)).toContain("runwrk");
   });
 
-  it("myteam --version outputs version number", async () => {
+  it("runwrk --version outputs version number", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "--version"]);
+      await program.parseAsync(["node", "runwrk", "--version"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -33,10 +33,10 @@ describe("CLI command routing", () => {
     expect(stripAnsi(output.stdout)).toContain("1.0.0");
   });
 
-  it("myteam setup --help contains description", async () => {
+  it("runwrk setup --help contains description", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "setup", "--help"]);
+      await program.parseAsync(["node", "runwrk", "setup", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -44,10 +44,10 @@ describe("CLI command routing", () => {
     expect(stripAnsi(output.stdout)).toContain("Configure Anthropic API key");
   });
 
-  it("myteam chat --help contains description", async () => {
+  it("runwrk chat --help contains description", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "chat", "--help"]);
+      await program.parseAsync(["node", "runwrk", "chat", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -55,10 +55,10 @@ describe("CLI command routing", () => {
     expect(stripAnsi(output.stdout)).toContain("chat session");
   });
 
-  it("myteam twitter --help contains description", async () => {
+  it("runwrk twitter --help contains description", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "twitter", "--help"]);
+      await program.parseAsync(["node", "runwrk", "twitter", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -66,10 +66,10 @@ describe("CLI command routing", () => {
     expect(stripAnsi(output.stdout)).toContain("Twitter engagement");
   });
 
-  it("myteam twitter setup --help contains description", async () => {
+  it("runwrk twitter setup --help contains description", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "twitter", "setup", "--help"]);
+      await program.parseAsync(["node", "runwrk", "twitter", "setup", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -77,10 +77,10 @@ describe("CLI command routing", () => {
     expect(stripAnsi(output.stdout)).toContain("credentials");
   });
 
-  it("myteam twitter stats --help contains description", async () => {
+  it("runwrk twitter stats --help contains description", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "twitter", "stats", "--help"]);
+      await program.parseAsync(["node", "runwrk", "twitter", "stats", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -88,10 +88,10 @@ describe("CLI command routing", () => {
     expect(stripAnsi(output.stdout)).toContain("analytics");
   });
 
-  it("myteam twitter feedback --help contains description", async () => {
+  it("runwrk twitter feedback --help contains description", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "twitter", "feedback", "--help"]);
+      await program.parseAsync(["node", "runwrk", "twitter", "feedback", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -99,10 +99,10 @@ describe("CLI command routing", () => {
     expect(stripAnsi(output.stdout)).toContain("directives");
   });
 
-  it("myteam twitter workflow --help contains description", async () => {
+  it("runwrk twitter workflow --help contains description", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "twitter", "workflow", "--help"]);
+      await program.parseAsync(["node", "runwrk", "twitter", "workflow", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -110,10 +110,10 @@ describe("CLI command routing", () => {
     expect(stripAnsi(output.stdout)).toContain("workflow");
   });
 
-  it("myteam twitter workflow create --help contains description", async () => {
+  it("runwrk twitter workflow create --help contains description", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "twitter", "workflow", "create", "--help"]);
+      await program.parseAsync(["node", "runwrk", "twitter", "workflow", "create", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -121,10 +121,10 @@ describe("CLI command routing", () => {
     expect(stripAnsi(output.stdout)).toContain("Create");
   });
 
-  it("myteam twitter workflow list --help contains description", async () => {
+  it("runwrk twitter workflow list --help contains description", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "twitter", "workflow", "list", "--help"]);
+      await program.parseAsync(["node", "runwrk", "twitter", "workflow", "list", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -132,10 +132,10 @@ describe("CLI command routing", () => {
     expect(stripAnsi(output.stdout)).toContain("List");
   });
 
-  it("myteam twitter workflow edit --help contains description", async () => {
+  it("runwrk twitter workflow edit --help contains description", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "twitter", "workflow", "edit", "--help"]);
+      await program.parseAsync(["node", "runwrk", "twitter", "workflow", "edit", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -143,10 +143,10 @@ describe("CLI command routing", () => {
     expect(stripAnsi(output.stdout)).toContain("Edit");
   });
 
-  it("myteam twitter workflow delete --help contains description", async () => {
+  it("runwrk twitter workflow delete --help contains description", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "twitter", "workflow", "delete", "--help"]);
+      await program.parseAsync(["node", "runwrk", "twitter", "workflow", "delete", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);

@@ -9,15 +9,15 @@ import { dirname } from "path";
 // --- Types ---
 
 export interface LoggerConfig {
-  /** Minimum log level (default: "info", or "debug" if MYTEAM_DEBUG=1) */
+  /** Minimum log level (default: "info", or "debug" if RUNWRK_DEBUG=1) */
   level?: string;
-  /** Path to the JSONL log file (default: ".myteam/logs/myteam.log") */
+  /** Path to the JSONL log file (default: ".runwrk/logs/runwrk.log") */
   logFile?: string;
   /** Max file size in bytes before rotation (default: 5MB) */
   maxFileSize?: number;
   /** Number of rotated backups to keep (default: 3) */
   maxFiles?: number;
-  /** Force JSON console output (default: auto-detect from MYTEAM_DAEMON env) */
+  /** Force JSON console output (default: auto-detect from RUNWRK_DAEMON env) */
   jsonConsole?: boolean;
 }
 
@@ -40,7 +40,7 @@ function fallbackLogger(): pino.Logger {
 /** Resolve log level from config or environment */
 function resolveLevel(configLevel?: string): pino.Level {
   if (configLevel) return configLevel as pino.Level;
-  if (process.env.MYTEAM_DEBUG === "1") return "debug";
+  if (process.env.RUNWRK_DEBUG === "1") return "debug";
   return "info";
 }
 
@@ -53,15 +53,15 @@ function ensureLogDir(filePath: string): void {
 // --- File Rotation ---
 
 /** Rotate log files if the current one exceeds maxFileSize.
- *  Shifts existing backups (myteam.1.log → myteam.2.log) and renames
- *  the active file to myteam.1.log. Deletes the oldest if over maxFiles. */
+ *  Shifts existing backups (runwrk.1.log → runwrk.2.log) and renames
+ *  the active file to runwrk.1.log. Deletes the oldest if over maxFiles. */
 function rotateIfNeeded(logFile: string, maxFileSize: number, maxFiles: number): void {
   if (!existsSync(logFile)) return;
 
   const stats = statSync(logFile);
   if (stats.size < maxFileSize) return;
 
-  // Build backup file names: myteam.1.log, myteam.2.log, etc.
+  // Build backup file names: runwrk.1.log, runwrk.2.log, etc.
   const ext = logFile.endsWith(".log") ? ".log" : "";
   const base = ext ? logFile.slice(0, -ext.length) : logFile;
 
@@ -87,10 +87,10 @@ function rotateIfNeeded(logFile: string, maxFileSize: number, maxFiles: number):
  *  In interactive mode: pretty-print to stdout + JSON to file. */
 export async function createAppLogger(config: LoggerConfig = {}): Promise<pino.Logger> {
   const level = resolveLevel(config.level);
-  const logFile = config.logFile ?? ".myteam/logs/myteam.log";
+  const logFile = config.logFile ?? ".runwrk/logs/runwrk.log";
   const maxFileSize = config.maxFileSize ?? DEFAULT_MAX_FILE_SIZE;
   const maxFiles = config.maxFiles ?? DEFAULT_MAX_FILES;
-  const isDaemon = config.jsonConsole ?? process.env.MYTEAM_DAEMON === "1";
+  const isDaemon = config.jsonConsole ?? process.env.RUNWRK_DAEMON === "1";
 
   ensureLogDir(logFile);
 

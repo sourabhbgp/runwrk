@@ -1,25 +1,25 @@
 services:
-  myteam:
+  runwrk:
     build: .
-    container_name: myteam-daemon
+    container_name: runwrk-daemon
     restart: unless-stopped
     volumes:
-      - myteam-data:/app/.myteam
+      - runwrk-data:/app/.runwrk
     env_file:
       - .env.local
     environment:
-      - MYTEAM_DAEMON=1
+      - RUNWRK_DAEMON=1
     logging:
       driver: "local"
       options:
         max-size: "20m"
         max-file: "5"
     healthcheck:
-      test: ["CMD", "cat", "/app/.myteam/daemon-health.json"]
+      test: ["CMD", "cat", "/app/.runwrk/daemon-health.json"]
       interval: 120s
       timeout: 5s
       retries: 3
       start_period: 60s
 
 volumes:
-  myteam-data:
+  runwrk-data:

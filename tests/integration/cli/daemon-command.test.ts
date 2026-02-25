@@ -1,5 +1,5 @@
 /**
- * daemon-command.test.ts — CLI integration tests for `myteam daemon`.
+ * daemon-command.test.ts — CLI integration tests for `runwrk daemon`.
  *
  * Verifies command registration, help output, and flag parsing.
  * Uses createTestProgram() for output capture and exitOverride.
@@ -10,10 +10,10 @@ import { createTestProgram } from "../../helpers/program-factory";
 import { stripAnsi } from "../../helpers/strip";
 
 describe("CLI daemon command", () => {
-  it("myteam daemon --help exits with code 0 and shows description", async () => {
+  it("runwrk daemon --help exits with code 0 and shows description", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "daemon", "--help"]);
+      await program.parseAsync(["node", "runwrk", "daemon", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -23,10 +23,10 @@ describe("CLI daemon command", () => {
     expect(text).toContain("Docker");
   });
 
-  it("myteam daemon --help shows --max-concurrent option", async () => {
+  it("runwrk daemon --help shows --max-concurrent option", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "daemon", "--help"]);
+      await program.parseAsync(["node", "runwrk", "daemon", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -38,7 +38,7 @@ describe("CLI daemon command", () => {
   it("root help text includes Daemon section", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "--help"]);
+      await program.parseAsync(["node", "runwrk", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);

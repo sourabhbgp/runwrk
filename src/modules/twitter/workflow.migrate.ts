@@ -1,8 +1,8 @@
 /**
  * workflow.migrate.ts — Multi-stage migration for the Twitter engagement module.
  *
- * Stage 1 (legacy → workflow): Migrates the old flat `.myteam/twitter-memory.json`
- * into the per-workflow structure at `.myteam/workflows/default/`.
+ * Stage 1 (legacy → workflow): Migrates the old flat `.runwrk/twitter-memory.json`
+ * into the per-workflow structure at `.runwrk/workflows/default/`.
  *
  * Stage 2 (memory.json → actions.json): Converts the old memory.json format
  * (arrays of repliedTo, liked, skipped, etc.) into the new tiered memory system
@@ -24,7 +24,7 @@ import { info, dim } from "../../common";
 import type { Action, ActionStore, FactStore, ObservationStore, RelationshipStore } from "./memory.types";
 
 // Lazy path getters for testability with process.chdir
-function getBaseDir(): string { return join(process.cwd(), ".myteam"); }
+function getBaseDir(): string { return join(process.cwd(), ".runwrk"); }
 function getWorkflowsDir(): string { return join(getBaseDir(), "workflows"); }
 function getOldMemoryPath(): string { return join(getBaseDir(), "twitter-memory.json"); }
 function getOldConfigPath(): string { return join(getBaseDir(), "twitter-config.json"); }

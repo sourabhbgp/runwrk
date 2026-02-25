@@ -10,7 +10,7 @@
  * pipeline. Unlike raw actions, facts stay compact — they represent learned
  * knowledge, not raw history. Typically <50 facts per workflow.
  *
- * Storage: `.myteam/workflows/<name>/facts.json`
+ * Storage: `.runwrk/workflows/<name>/facts.json`
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";

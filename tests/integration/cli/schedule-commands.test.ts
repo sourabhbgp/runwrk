@@ -1,5 +1,5 @@
 /**
- * schedule-commands.test.ts — CLI integration tests for `myteam schedule` commands.
+ * schedule-commands.test.ts — CLI integration tests for `runwrk schedule` commands.
  *
  * Verifies command routing and help output for all schedule subcommands.
  * Uses createTestProgram() for output capture and exitOverride.
@@ -10,10 +10,10 @@ import { createTestProgram } from "../../helpers/program-factory";
 import { stripAnsi } from "../../helpers/strip";
 
 describe("CLI schedule command routing", () => {
-  it("myteam schedule --help contains description", async () => {
+  it("runwrk schedule --help contains description", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "schedule", "--help"]);
+      await program.parseAsync(["node", "runwrk", "schedule", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -21,10 +21,10 @@ describe("CLI schedule command routing", () => {
     expect(stripAnsi(output.stdout)).toContain("scheduled jobs");
   });
 
-  it("myteam schedule add --help shows required options", async () => {
+  it("runwrk schedule add --help shows required options", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "schedule", "add", "--help"]);
+      await program.parseAsync(["node", "runwrk", "schedule", "add", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -35,10 +35,10 @@ describe("CLI schedule command routing", () => {
     expect(text).toContain("--cron");
   });
 
-  it("myteam schedule remove --help shows name argument", async () => {
+  it("runwrk schedule remove --help shows name argument", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "schedule", "remove", "--help"]);
+      await program.parseAsync(["node", "runwrk", "schedule", "remove", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -47,10 +47,10 @@ describe("CLI schedule command routing", () => {
     expect(text).toContain("name");
   });
 
-  it("myteam schedule list --help contains description", async () => {
+  it("runwrk schedule list --help contains description", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "schedule", "list", "--help"]);
+      await program.parseAsync(["node", "runwrk", "schedule", "list", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -58,10 +58,10 @@ describe("CLI schedule command routing", () => {
     expect(stripAnsi(output.stdout)).toContain("List");
   });
 
-  it("myteam schedule enable --help shows name argument", async () => {
+  it("runwrk schedule enable --help shows name argument", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "schedule", "enable", "--help"]);
+      await program.parseAsync(["node", "runwrk", "schedule", "enable", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -71,10 +71,10 @@ describe("CLI schedule command routing", () => {
     expect(text).toContain("enable");
   });
 
-  it("myteam schedule disable --help shows name argument", async () => {
+  it("runwrk schedule disable --help shows name argument", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "schedule", "disable", "--help"]);
+      await program.parseAsync(["node", "runwrk", "schedule", "disable", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -83,10 +83,10 @@ describe("CLI schedule command routing", () => {
     expect(text).toContain("name");
   });
 
-  it("myteam schedule logs --help shows name argument and options", async () => {
+  it("runwrk schedule logs --help shows name argument and options", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "schedule", "logs", "--help"]);
+      await program.parseAsync(["node", "runwrk", "schedule", "logs", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -100,7 +100,7 @@ describe("CLI schedule command routing", () => {
   it("root help text includes Scheduler section", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "--help"]);
+      await program.parseAsync(["node", "runwrk", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);

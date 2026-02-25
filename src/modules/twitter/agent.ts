@@ -41,7 +41,7 @@ export function formatFollowerCount(count: number): string {
 function getAnthropicClient(): Anthropic {
   const env = readEnv();
   const key = env.ANTHROPIC_API_KEY;
-  if (!key) throw new Error("No Anthropic API key. Run `myteam setup` first.");
+  if (!key) throw new Error("No Anthropic API key. Run `runwrk setup` first.");
   return createAnthropicClient(key);
 }
 

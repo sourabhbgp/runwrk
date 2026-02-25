@@ -43,7 +43,7 @@ export async function twitterFeedback(opts: { workflow: string }): Promise<void>
   ensureMigrated();
 
   const workflowName = opts.workflow;
-  console.log(`\n${bold(cyan("myteam twitter feedback"))} ${dim(`\u2014 ${workflowName} workflow`)}\n`);
+  console.log(`\n${bold(cyan("runwrk twitter feedback"))} ${dim(`\u2014 ${workflowName} workflow`)}\n`);
 
   const rl = createInterface({ input: process.stdin, output: process.stdout });
 

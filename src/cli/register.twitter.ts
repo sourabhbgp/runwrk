@@ -1,4 +1,4 @@
-/** Registers the `myteam twitter` command and its subcommands */
+/** Registers the `runwrk twitter` command and its subcommands */
 import type { Command } from "commander";
 
 export function registerTwitterCommand(program: Command): void {
@@ -19,15 +19,15 @@ export function registerTwitterCommand(program: Command): void {
 
         if (workflows.length === 0) {
           err("No workflows found. Create one first:");
-          console.log(dim(`  myteam twitter workflow create\n`));
+          console.log(dim(`  runwrk twitter workflow create\n`));
         } else {
           err("Missing required --workflow flag.");
           console.log(`\n${bold("Available workflows:")}`);
           for (const name of workflows) {
             console.log(`  ${yellow(name)}`);
           }
-          console.log(dim(`\nUsage: myteam twitter -w <name>`));
-          console.log(dim(`       myteam twitter workflow create\n`));
+          console.log(dim(`\nUsage: runwrk twitter -w <name>`));
+          console.log(dim(`       runwrk twitter workflow create\n`));
         }
         process.exit(1);
       }

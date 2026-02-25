@@ -2,7 +2,7 @@ node_modules
 .git
 tests
 coverage
-.myteam
+.runwrk
 .env.local
 *.tsbuildinfo
 .DS_Store

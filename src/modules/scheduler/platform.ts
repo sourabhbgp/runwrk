@@ -25,14 +25,14 @@ import { getLastRunTimestamp } from "./logs";
 
 // --- Platform Detection ---
 
-/** Detect the current platform. Returns "daemon" if MYTEAM_DAEMON=1, otherwise OS-based. */
+/** Detect the current platform. Returns "daemon" if RUNWRK_DAEMON=1, otherwise OS-based. */
 export function detectPlatform(): Platform {
   // Daemon mode takes priority — used inside Docker containers
-  if (process.env.MYTEAM_DAEMON === "1") return "daemon";
+  if (process.env.RUNWRK_DAEMON === "1") return "daemon";
 
   const p = process.platform;
   if (p === "darwin" || p === "linux") return p;
-  throw new Error(`Unsupported platform: "${p}". Only macOS (launchd), Linux (systemd), or daemon mode (MYTEAM_DAEMON=1) are supported.`);
+  throw new Error(`Unsupported platform: "${p}". Only macOS (launchd), Linux (systemd), or daemon mode (RUNWRK_DAEMON=1) are supported.`);
 }
 
 // --- Executable Paths ---

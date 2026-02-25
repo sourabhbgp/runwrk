@@ -206,7 +206,7 @@ export async function runConsolidation(
   const env = readEnv();
   const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    logError("No Anthropic API key. Run `myteam setup` first.");
+    logError("No Anthropic API key. Run `runwrk setup` first.");
     return;
   }
 

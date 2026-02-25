@@ -43,7 +43,7 @@ describe("readConfig", () => {
     // Write a config file that only has topics — everything else should get defaults
     const partial = { topics: ["ai", "ml"] };
     writeFileSync(
-      join(workspace.myteamDir, "twitter-config.json"),
+      join(workspace.runwrkDir, "twitter-config.json"),
       JSON.stringify(partial, null, 2),
     );
 

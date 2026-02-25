@@ -55,7 +55,7 @@ describe("readDaemonState", () => {
     };
 
     // Manually write state file
-    const dir = join(workspace.root, ".myteam", "scheduler");
+    const dir = join(workspace.root, ".runwrk", "scheduler");
     const { mkdirSync, writeFileSync } = require("fs");
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, "daemon-state.json"), JSON.stringify(existing), "utf-8");
@@ -77,7 +77,7 @@ describe("writeDaemonState", () => {
 
     writeDaemonState(state);
 
-    const filePath = join(workspace.root, ".myteam", "scheduler", "daemon-state.json");
+    const filePath = join(workspace.root, ".runwrk", "scheduler", "daemon-state.json");
     expect(existsSync(filePath)).toBe(true);
 
     const raw = readFileSync(filePath, "utf-8");

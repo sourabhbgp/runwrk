@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 
 /** Get the memory file path (lazy for testability with process.chdir) */
-function getMemoryPath(): string { return join(process.cwd(), ".myteam", "MEMORY.md"); }
+function getMemoryPath(): string { return join(process.cwd(), ".runwrk", "MEMORY.md"); }
 
 function ensureDir() {
   const dir = dirname(getMemoryPath());

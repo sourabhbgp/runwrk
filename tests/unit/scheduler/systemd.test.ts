@@ -26,14 +26,14 @@ import { join } from "path";
 describe("servicePath", () => {
   it("returns path in ~/.config/systemd/user/ with .service extension", () => {
     const path = servicePath("test-job");
-    expect(path).toBe(join(homedir(), ".config", "systemd", "user", "myteam-test-job.service"));
+    expect(path).toBe(join(homedir(), ".config", "systemd", "user", "runwrk-test-job.service"));
   });
 });
 
 describe("timerPath", () => {
   it("returns path in ~/.config/systemd/user/ with .timer extension", () => {
     const path = timerPath("test-job");
-    expect(path).toBe(join(homedir(), ".config", "systemd", "user", "myteam-test-job.timer"));
+    expect(path).toBe(join(homedir(), ".config", "systemd", "user", "runwrk-test-job.timer"));
   });
 });
 
@@ -109,10 +109,10 @@ describe("generateServiceFile", () => {
 
   const mockPaths: ExecutablePaths = {
     bunPath: "/usr/local/bin/bun",
-    entryPath: "/home/user/myteam/src/index.ts",
-    projectRoot: "/home/user/myteam",
+    entryPath: "/home/user/runwrk/src/index.ts",
+    projectRoot: "/home/user/runwrk",
     bunDir: "/usr/local/bin",
-    logDir: "/home/user/myteam/.myteam/scheduler/logs",
+    logDir: "/home/user/runwrk/.runwrk/scheduler/logs",
   };
 
   it("generates valid INI-style service file", () => {
@@ -125,19 +125,19 @@ describe("generateServiceFile", () => {
 
   it("includes description from job", () => {
     const content = generateServiceFile(mockJob, mockPaths);
-    expect(content).toContain("Description=MyTeam: Run growth engagement daily");
+    expect(content).toContain("Description=RunWrk: Run growth engagement daily");
   });
 
   it("includes ExecStart with bun, entry point, and command", () => {
     const content = generateServiceFile(mockJob, mockPaths);
     expect(content).toContain(
-      "ExecStart=/usr/local/bin/bun run /home/user/myteam/src/index.ts twitter -w growth"
+      "ExecStart=/usr/local/bin/bun run /home/user/runwrk/src/index.ts twitter -w growth"
     );
   });
 
   it("includes working directory", () => {
     const content = generateServiceFile(mockJob, mockPaths);
-    expect(content).toContain("WorkingDirectory=/home/user/myteam");
+    expect(content).toContain("WorkingDirectory=/home/user/runwrk");
   });
 
   it("includes log file paths with append mode", () => {
@@ -151,7 +151,7 @@ describe("generateServiceFile", () => {
   it("uses job name as fallback description when not provided", () => {
     const noDescJob: ScheduledJob = { ...mockJob, description: undefined };
     const content = generateServiceFile(noDescJob, mockPaths);
-    expect(content).toContain("Description=MyTeam: MyTeam job: test-engage");
+    expect(content).toContain("Description=RunWrk: RunWrk job: test-engage");
   });
 });
 
@@ -188,6 +188,6 @@ describe("generateTimerFile", () => {
 
   it("includes description", () => {
     const content = generateTimerFile(mockJob);
-    expect(content).toContain("Timer for MyTeam: Run growth engagement daily");
+    expect(content).toContain("Timer for RunWrk: Run growth engagement daily");
   });
 });

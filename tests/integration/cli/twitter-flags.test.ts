@@ -14,7 +14,7 @@ describe("Twitter command flags", () => {
   it("twitter --help lists --workflow and --manual flags", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "twitter", "--help"]);
+      await program.parseAsync(["node", "runwrk", "twitter", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -27,7 +27,7 @@ describe("Twitter command flags", () => {
   it("twitter --help lists -w shorthand for --workflow", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "twitter", "--help"]);
+      await program.parseAsync(["node", "runwrk", "twitter", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -39,7 +39,7 @@ describe("Twitter command flags", () => {
   it("twitter stats --help lists --workflow option", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "twitter", "stats", "--help"]);
+      await program.parseAsync(["node", "runwrk", "twitter", "stats", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -51,7 +51,7 @@ describe("Twitter command flags", () => {
   it("twitter feedback --help shows --workflow as required", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "twitter", "feedback", "--help"]);
+      await program.parseAsync(["node", "runwrk", "twitter", "feedback", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -65,7 +65,7 @@ describe("Twitter command flags", () => {
   it("twitter workflow edit --help shows --workflow as required", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "twitter", "workflow", "edit", "--help"]);
+      await program.parseAsync(["node", "runwrk", "twitter", "workflow", "edit", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -77,7 +77,7 @@ describe("Twitter command flags", () => {
   it("twitter workflow delete --help shows --workflow as required", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "twitter", "workflow", "delete", "--help"]);
+      await program.parseAsync(["node", "runwrk", "twitter", "workflow", "delete", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);

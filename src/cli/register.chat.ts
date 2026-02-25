@@ -1,4 +1,4 @@
-/** Registers the `myteam chat` command for task-focused Claude sessions */
+/** Registers the `runwrk chat` command for task-focused Claude sessions */
 import type { Command } from "commander";
 
 export function registerChatCommand(program: Command): void {

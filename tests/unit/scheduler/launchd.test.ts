@@ -23,8 +23,8 @@ import { join } from "path";
 // --- jobLabel ---
 
 describe("jobLabel", () => {
-  it("prefixes job name with com.myteam.", () => {
-    expect(jobLabel("growth-engage")).toBe("com.myteam.growth-engage");
+  it("prefixes job name with com.runwrk.", () => {
+    expect(jobLabel("growth-engage")).toBe("com.runwrk.growth-engage");
   });
 });
 
@@ -33,7 +33,7 @@ describe("jobLabel", () => {
 describe("plistPath", () => {
   it("returns path in ~/Library/LaunchAgents/", () => {
     const path = plistPath("test-job");
-    expect(path).toBe(join(homedir(), "Library", "LaunchAgents", "com.myteam.test-job.plist"));
+    expect(path).toBe(join(homedir(), "Library", "LaunchAgents", "com.runwrk.test-job.plist"));
   });
 });
 
@@ -113,10 +113,10 @@ describe("generatePlist", () => {
 
   const mockPaths: ExecutablePaths = {
     bunPath: "/usr/local/bin/bun",
-    entryPath: "/home/user/myteam/src/index.ts",
-    projectRoot: "/home/user/myteam",
+    entryPath: "/home/user/runwrk/src/index.ts",
+    projectRoot: "/home/user/runwrk",
     bunDir: "/usr/local/bin",
-    logDir: "/home/user/myteam/.myteam/scheduler/logs",
+    logDir: "/home/user/runwrk/.runwrk/scheduler/logs",
   };
 
   it("generates valid XML plist structure", () => {
@@ -130,7 +130,7 @@ describe("generatePlist", () => {
 
   it("includes correct label", () => {
     const xml = generatePlist(mockJob, mockPaths);
-    expect(xml).toContain("<string>com.myteam.test-engage</string>");
+    expect(xml).toContain("<string>com.runwrk.test-engage</string>");
   });
 
   it("includes ProgramArguments with bun, run, entry point, and command args", () => {
@@ -138,7 +138,7 @@ describe("generatePlist", () => {
 
     expect(xml).toContain("<string>/usr/local/bin/bun</string>");
     expect(xml).toContain("<string>run</string>");
-    expect(xml).toContain("<string>/home/user/myteam/src/index.ts</string>");
+    expect(xml).toContain("<string>/home/user/runwrk/src/index.ts</string>");
     expect(xml).toContain("<string>twitter</string>");
     expect(xml).toContain("<string>-w</string>");
     expect(xml).toContain("<string>growth</string>");
@@ -153,7 +153,7 @@ describe("generatePlist", () => {
 
   it("includes working directory", () => {
     const xml = generatePlist(mockJob, mockPaths);
-    expect(xml).toContain("<string>/home/user/myteam</string>");
+    expect(xml).toContain("<string>/home/user/runwrk</string>");
   });
 
   it("includes PATH environment variable with bun directory", () => {

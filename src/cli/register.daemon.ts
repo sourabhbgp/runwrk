@@ -1,4 +1,4 @@
-/** Registers the `myteam daemon` command — starts the in-process scheduler loop */
+/** Registers the `runwrk daemon` command — starts the in-process scheduler loop */
 import type { Command } from "commander";
 
 export function registerDaemonCommand(program: Command): void {
@@ -26,8 +26,8 @@ export function registerDaemonCommand(program: Command): void {
       process.on("SIGTERM", shutdown);
       process.on("SIGINT", shutdown);
 
-      // Force MYTEAM_DAEMON=1 so platform detection routes to daemon backend
-      process.env.MYTEAM_DAEMON = "1";
+      // Force RUNWRK_DAEMON=1 so platform detection routes to daemon backend
+      process.env.RUNWRK_DAEMON = "1";
 
       await startDaemon({
         maxConcurrent,

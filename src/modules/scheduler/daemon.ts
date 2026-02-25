@@ -1,5 +1,5 @@
 // Daemon backend — in-process timer loop for running scheduled jobs inside Docker.
-// Replaces systemd/launchd when MYTEAM_DAEMON=1. Uses croner for cron expression parsing.
+// Replaces systemd/launchd when RUNWRK_DAEMON=1. Uses croner for cron expression parsing.
 // All output is structured via pino for Docker log capture and JSONL persistence.
 
 import { spawn } from "child_process";
@@ -32,7 +32,7 @@ export interface DaemonConfig {
 
 /** Path to the daemon health check file (read by Docker HEALTHCHECK) */
 function healthPath(): string {
-  return join(process.cwd(), ".myteam", "daemon-health.json");
+  return join(process.cwd(), ".runwrk", "daemon-health.json");
 }
 
 /** Write a health check file with current daemon status — read by Docker HEALTHCHECK */

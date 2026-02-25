@@ -14,7 +14,7 @@ function systemdUserDir(): string {
 
 /** Systemd unit name prefix for our jobs */
 function unitName(name: string): string {
-  return `myteam-${name}`;
+  return `runwrk-${name}`;
 }
 
 /** Full path to the .service file for a job */
@@ -99,11 +99,11 @@ export function cronToOnCalendar(cron: string): string[] {
 
 /** Generate the systemd .service unit file content */
 export function generateServiceFile(job: ScheduledJob, paths: ExecutablePaths): string {
-  const description = job.description || `MyTeam job: ${job.name}`;
+  const description = job.description || `RunWrk job: ${job.name}`;
   const cmdArgs = job.command.split(/\s+/).join(" ");
 
   return `[Unit]
-Description=MyTeam: ${description}
+Description=RunWrk: ${description}
 
 [Service]
 Type=oneshot
@@ -116,7 +116,7 @@ StandardError=append:${join(paths.logDir, `${job.name}.stderr.log`)}
 
 /** Generate the systemd .timer unit file content */
 export function generateTimerFile(job: ScheduledJob): string {
-  const description = job.description || `MyTeam job: ${job.name}`;
+  const description = job.description || `RunWrk job: ${job.name}`;
   const calendars = cronToOnCalendar(job.cron);
 
   const onCalendarLines = calendars
@@ -124,7 +124,7 @@ export function generateTimerFile(job: ScheduledJob): string {
     .join("\n");
 
   return `[Unit]
-Description=Timer for MyTeam: ${description}
+Description=Timer for RunWrk: ${description}
 
 [Timer]
 ${onCalendarLines}

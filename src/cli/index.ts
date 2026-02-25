@@ -25,7 +25,7 @@ function getHelpText(): string {
   const lines: string[] = [];
 
   // Banner
-  lines.push(`\n${bold(cyan("myteam"))} ${dim("— AI marketing team for developers")}\n`);
+  lines.push(`\n${bold(cyan("runwrk"))} ${dim("— AI marketing team for developers")}\n`);
   lines.push(dim("─".repeat(50)));
 
   const sections: HelpSection[] = [
@@ -97,7 +97,7 @@ function getHelpText(): string {
   // Footer
   lines.push("");
   lines.push(dim("─".repeat(50)));
-  lines.push(dim(`  v1.0.0 · Run myteam <command> --help for details\n`));
+  lines.push(dim(`  v1.0.0 · Run runwrk <command> --help for details\n`));
 
   return lines.join("\n");
 }
@@ -106,7 +106,7 @@ function getHelpText(): string {
 
 /** Creates the top-level CLI program and registers all commands */
 export function buildProgram(): Command {
-  const program = new Command("myteam")
+  const program = new Command("runwrk")
     .version("1.0.0")
     .description("AI marketing team for developers");
 
@@ -126,7 +126,7 @@ export function buildProgram(): Command {
     },
   });
 
-  // Show custom help when no command is given (bare `myteam`)
+  // Show custom help when no command is given (bare `runwrk`)
   program.action(() => {
     program.outputHelp();
   });

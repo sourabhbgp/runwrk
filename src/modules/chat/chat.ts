@@ -14,13 +14,13 @@ export async function chat() {
   const env = readEnv();
   const key = env.ANTHROPIC_API_KEY;
   if (!key) {
-    error("No API key found. Run `myteam setup` first.");
+    error("No API key found. Run `runwrk setup` first.");
     process.exit(1);
   }
 
   const client = createAnthropicClient(key);
 
-  console.log(`\n${bold(cyan("myteam chat"))} ${dim("— task-focused assistant")}`);
+  console.log(`\n${bold(cyan("runwrk chat"))} ${dim("— task-focused assistant")}`);
   console.log(dim("Commands: /new /remember /forget /memory /exit\n"));
 
   const rl = createInterface({

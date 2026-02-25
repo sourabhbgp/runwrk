@@ -12,7 +12,7 @@
  * Reciprocity score measures balance: positive means they engage more with us
  * than we do with them (good), negative means we're over-investing.
  *
- * Storage: `.myteam/workflows/<name>/relationships.json`
+ * Storage: `.runwrk/workflows/<name>/relationships.json`
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";

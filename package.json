@@ -1,9 +1,9 @@
 {
-  "name": "myteam",
+  "name": "runwrk",
   "type": "module",
   "private": true,
   "bin": {
-    "myteam": "./src/index.ts"
+    "runwrk": "./src/index.ts"
   },
   "scripts": {
     "start": "bun run src/index.ts",

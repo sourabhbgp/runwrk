@@ -1,9 +1,9 @@
 /**
  * workflow.ts — Persistence layer for workflow directories and global safety state.
  *
- * Each workflow lives in `.myteam/workflows/<name>/` with its own workflow.json
+ * Each workflow lives in `.runwrk/workflows/<name>/` with its own workflow.json
  * and memory.json. Global safety state (blocked accounts, daily post limits) is
- * shared across all workflows via `.myteam/twitter-global.json`.
+ * shared across all workflows via `.runwrk/twitter-global.json`.
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rmSync } from "fs";
@@ -12,8 +12,8 @@ import type { WorkflowConfig, GlobalSafetyState } from "./workflow.types";
 
 // --- Path Helpers (lazy — evaluated on each call for testability) ---
 
-/** Get the base .myteam directory path */
-function getBaseDir(): string { return join(process.cwd(), ".myteam"); }
+/** Get the base .runwrk directory path */
+function getBaseDir(): string { return join(process.cwd(), ".runwrk"); }
 
 /** Get the workflows root directory path */
 function getWorkflowsDir(): string { return join(getBaseDir(), "workflows"); }
@@ -83,7 +83,7 @@ export function workflowExists(name: string): boolean {
 export function readWorkflowConfig(name: string): WorkflowConfig {
   const path = workflowConfigPath(name);
   if (!existsSync(path)) {
-    throw new Error(`Workflow "${name}" not found. Run \`myteam twitter workflow create\` first.`);
+    throw new Error(`Workflow "${name}" not found. Run \`runwrk twitter workflow create\` first.`);
   }
   return JSON.parse(readFileSync(path, "utf-8")) as WorkflowConfig;
 }

@@ -1,5 +1,5 @@
 /**
- * auto.ts — Autonomous engagement mode (triggered by `myteam twitter` default).
+ * auto.ts — Autonomous engagement mode (triggered by `runwrk twitter` default).
  *
  * Claude analyzes each tweet and takes action automatically, respecting session
  * and global limits. When a workflow is provided, uses its strategy and limits.

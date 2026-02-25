@@ -3,7 +3,7 @@ import { join } from "path";
 import { getMemoryBlock } from "./memory";
 
 /** Get the custom system prompt path (lazy for testability with process.chdir) */
-function getSystemPromptPath(): string { return join(process.cwd(), ".myteam", "SYSTEM.md"); }
+function getSystemPromptPath(): string { return join(process.cwd(), ".runwrk", "SYSTEM.md"); }
 
 const DEFAULT_SYSTEM_PROMPT = `You are a focused task assistant. Be concise and direct.
 Help the user with their current task. Avoid unnecessary preamble.`;

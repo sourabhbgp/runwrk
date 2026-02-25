@@ -27,10 +27,10 @@ function runCli(args: string): { stdout: string; exitCode: number } {
 }
 
 describe("CLI smoke tests (spawned process)", () => {
-  it("--help exits with code 0 and output contains 'myteam'", () => {
+  it("--help exits with code 0 and output contains 'runwrk'", () => {
     const { stdout, exitCode } = runCli("--help");
     expect(exitCode).toBe(0);
-    expect(stdout).toContain("myteam");
+    expect(stdout).toContain("runwrk");
   });
 
   it("--version exits with code 0 and output contains '1.0.0'", () => {

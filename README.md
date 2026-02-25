@@ -1,4 +1,4 @@
-# myteam
+# runwrk
 
 A task-focused AI assistant CLI powered by Claude. Lightweight, streaming chat with persistent memory, configurable system prompts, and autonomous Twitter engagement.
 
@@ -12,23 +12,23 @@ A task-focused AI assistant CLI powered by Claude. Lightweight, streaming chat w
 ```bash
 # Clone the repository
 git clone <repo-url>
-cd myteam
+cd runwrk
 
 # Install dependencies
 bun install
 
-# Link the CLI globally (makes `myteam` available everywhere)
+# Link the CLI globally (makes `runwrk` available everywhere)
 bun link
 ```
 
-After linking, the `myteam` command is available in your terminal. Alternatively, run commands directly with `bun run src/index.ts <command>`.
+After linking, the `runwrk` command is available in your terminal. Alternatively, run commands directly with `bun run src/index.ts <command>`.
 
 ## Setup
 
 Before using the chat, configure your Anthropic API key:
 
 ```bash
-myteam setup
+runwrk setup
 ```
 
 This will:
@@ -45,7 +45,7 @@ If you already have a key configured, setup will show a preview and let you keep
 Start an interactive chat session:
 
 ```bash
-myteam chat
+runwrk chat
 ```
 
 This launches a REPL where you type messages and get streaming responses from Claude. The assistant is task-focused — concise and direct, no unnecessary preamble.
@@ -64,7 +64,7 @@ Inside a chat session, these commands are available:
 
 ### Memory
 
-Memory lets you persist facts across chat sessions. Memories are stored in `.myteam/MEMORY.md` and automatically injected into the system prompt every time you start a chat.
+Memory lets you persist facts across chat sessions. Memories are stored in `.runwrk/MEMORY.md` and automatically injected into the system prompt every time you start a chat.
 
 ```
 > /remember always respond in bullet points
@@ -86,11 +86,11 @@ By default, the assistant uses a built-in system prompt:
 
 > You are a focused task assistant. Be concise and direct. Help the user with their current task. Avoid unnecessary preamble.
 
-To customize this, create a `.myteam/SYSTEM.md` file:
+To customize this, create a `.runwrk/SYSTEM.md` file:
 
 ```bash
-mkdir -p .myteam
-cat > .myteam/SYSTEM.md << 'EOF'
+mkdir -p .runwrk
+cat > .runwrk/SYSTEM.md << 'EOF'
 You are a senior backend engineer. When answering questions:
 - Always consider edge cases
 - Suggest tests for any code you write
@@ -105,7 +105,7 @@ The custom system prompt fully replaces the default. Persistent memories are sti
 Run autonomous Twitter engagement powered by Claude:
 
 ```bash
-myteam twitter
+runwrk twitter
 ```
 
 By default this runs in **auto mode** — the agent fetches your mentions, timeline, and discovery feeds, analyzes each tweet, crafts contextual replies, and posts them automatically.
@@ -113,7 +113,7 @@ By default this runs in **auto mode** — the agent fetches your mentions, timel
 To review each reply before it's posted, use **manual mode**:
 
 ```bash
-myteam twitter --manual
+runwrk twitter --manual
 ```
 
 In manual mode you approve, edit, or skip each suggested reply interactively.
@@ -122,9 +122,9 @@ In manual mode you approve, edit, or skip each suggested reply interactively.
 
 | Command | Description |
 |---|---|
-| `myteam twitter setup` | Configure your Twitter credentials (rettiwt API key) and engagement preferences |
-| `myteam twitter stats` | View engagement analytics — reply counts, response rates, and trends |
-| `myteam twitter feedback` | Manage persistent directives that shape how the agent writes replies |
+| `runwrk twitter setup` | Configure your Twitter credentials (rettiwt API key) and engagement preferences |
+| `runwrk twitter stats` | View engagement analytics — reply counts, response rates, and trends |
+| `runwrk twitter feedback` | Manage persistent directives that shape how the agent writes replies |
 
 ## Project Structure
 
@@ -133,9 +133,9 @@ src/
 ├── index.ts                  # CLI entry point (runs the Commander program)
 ├── cli/                      # Command registration (Commander.js)
 │   ├── index.ts              # Builds the program, imports all register.*.ts files
-│   ├── register.setup.ts     # `myteam setup` command
-│   ├── register.chat.ts      # `myteam chat` command
-│   └── register.twitter.ts   # `myteam twitter` + subcommands (setup, stats, feedback)
+│   ├── register.setup.ts     # `runwrk setup` command
+│   ├── register.chat.ts      # `runwrk chat` command
+│   └── register.twitter.ts   # `runwrk twitter` + subcommands (setup, stats, feedback)
 ├── common/                   # Shared utilities (no feature imports)
 │   ├── ui.ts                 # Terminal formatting (bold, dim, spinner, etc.)
 │   ├── env.ts                # .env.local read/write helpers
@@ -150,7 +150,7 @@ src/
     │   ├── chat.ts           # Main REPL loop with streaming
     │   ├── session.ts        # In-memory message history & system prompt
     │   ├── commands.ts       # Slash command parser & handlers
-    │   ├── memory.ts         # Persistent memory (.myteam/MEMORY.md)
+    │   ├── memory.ts         # Persistent memory (.runwrk/MEMORY.md)
     │   └── index.ts          # Public API
     └── twitter/              # Twitter engagement module
         ├── api.ts            # Rettiwt wrapper — all Twitter operations
@@ -159,14 +159,14 @@ src/
         ├── prompt.ts         # System prompt for the Twitter agent
         ├── session.ts        # Interactive approve/edit/skip loop
         ├── auto.ts           # Autonomous mode
-        ├── config.ts         # Read/write .myteam/twitter-config.json
+        ├── config.ts         # Read/write .runwrk/twitter-config.json
         ├── stats.ts          # Engagement analytics display
-        ├── memory.ts         # Engagement history (.myteam/twitter-memory.json)
+        ├── memory.ts         # Engagement history (.runwrk/twitter-memory.json)
         ├── feedback.ts       # Persistent agent directives manager
         ├── setup.ts          # Credential setup (rettiwt API key)
         └── index.ts          # Public API
 
-.myteam/                      # Runtime data (gitignored)
+.runwrk/                      # Runtime data (gitignored)
 ├── MEMORY.md                 # Persistent memories
 ├── SYSTEM.md                 # Custom system prompt (optional)
 ├── twitter-config.json       # Twitter engagement preferences
@@ -176,13 +176,13 @@ src/
 ## All Commands
 
 ```
-myteam setup                 Configure your Anthropic API key
-myteam chat                  Start an interactive chat session
-myteam twitter               Run autonomous Twitter engagement (default: auto)
-myteam twitter --manual      Run interactive Twitter engagement
-myteam twitter setup         Configure Twitter credentials and preferences
-myteam twitter stats         View engagement analytics
-myteam twitter feedback      Manage agent directives
-myteam --help                Show help
-myteam --version             Show version
+runwrk setup                 Configure your Anthropic API key
+runwrk chat                  Start an interactive chat session
+runwrk twitter               Run autonomous Twitter engagement (default: auto)
+runwrk twitter --manual      Run interactive Twitter engagement
+runwrk twitter setup         Configure Twitter credentials and preferences
+runwrk twitter stats         View engagement analytics
+runwrk twitter feedback      Manage agent directives
+runwrk --help                Show help
+runwrk --version             Show version
 ```

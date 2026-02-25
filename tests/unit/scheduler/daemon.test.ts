@@ -29,7 +29,7 @@ let workspace: TestWorkspace;
 beforeEach(() => {
   workspace = createTestWorkspace();
   // Ensure scheduler directory exists
-  mkdirSync(join(workspace.root, ".myteam", "scheduler", "logs"), { recursive: true });
+  mkdirSync(join(workspace.root, ".runwrk", "scheduler", "logs"), { recursive: true });
 });
 
 afterEach(() => {
@@ -39,7 +39,7 @@ afterEach(() => {
 /** Helper: write a jobs.json with the given jobs */
 function writeJobs(jobs: ScheduledJob[]): void {
   writeFileSync(
-    join(workspace.root, ".myteam", "scheduler", "jobs.json"),
+    join(workspace.root, ".runwrk", "scheduler", "jobs.json"),
     JSON.stringify(jobs, null, 2),
     "utf-8"
   );

@@ -1,5 +1,5 @@
 /**
- * Tests for stats.ts — the `myteam twitter stats` command output.
+ * Tests for stats.ts — the `runwrk twitter stats` command output.
  *
  * Mocks memory, workflow, and workflow.migrate modules so no disk I/O occurs.
  * Uses fake timers for deterministic date-based stat bucketing.

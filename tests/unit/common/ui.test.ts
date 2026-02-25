@@ -72,15 +72,15 @@ describe("ANSI formatting functions", () => {
 // --- Console Output Functions ---
 
 describe("banner", () => {
-  it("calls console.log with 'myteam'", () => {
+  it("calls console.log with 'runwrk'", () => {
     const logSpy = vi.spyOn(console, "log");
 
     banner();
 
     expect(logSpy).toHaveBeenCalled();
-    // The banner output should contain "myteam" when stripped of ANSI codes
+    // The banner output should contain "runwrk" when stripped of ANSI codes
     const output = logSpy.mock.calls[0][0] as string;
-    expect(stripAnsi(output)).toContain("myteam");
+    expect(stripAnsi(output)).toContain("runwrk");
   });
 });
 

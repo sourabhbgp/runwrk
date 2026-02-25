@@ -77,7 +77,7 @@ describe("ensureMigrated (full migration)", () => {
       feedback: ["Be concise"],
     };
     writeFileSync(
-      join(workspace.myteamDir, "twitter-memory.json"),
+      join(workspace.runwrkDir, "twitter-memory.json"),
       JSON.stringify(oldMemory, null, 2),
     );
 
@@ -112,7 +112,7 @@ describe("ensureMigrated (full migration)", () => {
     expect(existsSync(join(defaultDir, "relationships.json"))).toBe(true);
 
     // 3. twitter-global.json should contain the extracted blocked accounts
-    const globalPath = join(workspace.myteamDir, "twitter-global.json");
+    const globalPath = join(workspace.runwrkDir, "twitter-global.json");
     expect(existsSync(globalPath)).toBe(true);
     const global = JSON.parse(readFileSync(globalPath, "utf-8"));
     expect(global.blockedAccounts).toEqual(["spamuser"]);
@@ -124,7 +124,7 @@ describe("ensureMigrated (full migration)", () => {
     expect(workflowConfig.name).toBe("default");
 
     // 5. Old file should be renamed to .backup
-    const oldPath = join(workspace.myteamDir, "twitter-memory.json");
+    const oldPath = join(workspace.runwrkDir, "twitter-memory.json");
     expect(existsSync(oldPath)).toBe(false);
     expect(existsSync(oldPath + ".backup")).toBe(true);
   });
@@ -132,7 +132,7 @@ describe("ensureMigrated (full migration)", () => {
   it("migration preserves old config values in the default workflow", () => {
     // Write legacy memory file (required to trigger migration)
     writeFileSync(
-      join(workspace.myteamDir, "twitter-memory.json"),
+      join(workspace.runwrkDir, "twitter-memory.json"),
       JSON.stringify({ repliedTo: [], blockedAccounts: [] }),
     );
 
@@ -149,7 +149,7 @@ describe("ensureMigrated (full migration)", () => {
       },
     };
     writeFileSync(
-      join(workspace.myteamDir, "twitter-config.json"),
+      join(workspace.runwrkDir, "twitter-config.json"),
       JSON.stringify(oldConfig, null, 2),
     );
 

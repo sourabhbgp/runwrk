@@ -1,4 +1,4 @@
-/** Registers the `myteam setup` command for API key configuration */
+/** Registers the `runwrk setup` command for API key configuration */
 import type { Command } from "commander";
 
 export function registerSetupCommand(program: Command): void {

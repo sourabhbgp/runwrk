@@ -36,8 +36,8 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # docs
 docs
 
-# myteam runtime data
-.myteam
+# runwrk runtime data
+.runwrk
 
 # SQLite database
 *.db

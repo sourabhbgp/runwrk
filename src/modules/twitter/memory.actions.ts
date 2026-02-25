@@ -6,7 +6,7 @@
  * without interpretation. Higher layers (facts, observations) are derived from
  * this data during daily consolidation.
  *
- * Storage: `.myteam/workflows/<name>/actions.json`
+ * Storage: `.runwrk/workflows/<name>/actions.json`
  * Read pattern: read-modify-write (single-threaded CLI, no concurrency concerns)
  */
 

@@ -3,7 +3,7 @@
  * sorting by confidence/recency, and correct persistence within a named workflow.
  *
  * Facts are atomic pieces of knowledge extracted by the consolidation LLM,
- * stored at `.myteam/workflows/<name>/facts.json`.
+ * stored at `.runwrk/workflows/<name>/facts.json`.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";

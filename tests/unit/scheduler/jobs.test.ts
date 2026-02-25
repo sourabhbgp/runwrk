@@ -2,7 +2,7 @@
  * jobs.test.ts — Tests for the scheduler job registry CRUD operations.
  *
  * Uses createTestWorkspace() for filesystem isolation. Each test gets a clean
- * .myteam/ directory with no pre-existing scheduler data.
+ * .runwrk/ directory with no pre-existing scheduler data.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
@@ -31,18 +31,18 @@ afterEach(() => {
 // --- ensureSchedulerDir ---
 
 describe("ensureSchedulerDir", () => {
-  it("creates .myteam/scheduler/ and logs/ directories", () => {
+  it("creates .runwrk/scheduler/ and logs/ directories", () => {
     ensureSchedulerDir();
 
-    expect(existsSync(join(workspace.root, ".myteam", "scheduler"))).toBe(true);
-    expect(existsSync(join(workspace.root, ".myteam", "scheduler", "logs"))).toBe(true);
+    expect(existsSync(join(workspace.root, ".runwrk", "scheduler"))).toBe(true);
+    expect(existsSync(join(workspace.root, ".runwrk", "scheduler", "logs"))).toBe(true);
   });
 
   it("is idempotent — calling twice does not error", () => {
     ensureSchedulerDir();
     ensureSchedulerDir();
 
-    expect(existsSync(join(workspace.root, ".myteam", "scheduler"))).toBe(true);
+    expect(existsSync(join(workspace.root, ".runwrk", "scheduler"))).toBe(true);
   });
 });
 

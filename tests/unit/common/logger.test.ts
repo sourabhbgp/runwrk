@@ -2,7 +2,7 @@
  * logger.test.ts — Tests for the structured logging module.
  *
  * Verifies createAppLogger, getLogger singleton, level filtering, child loggers,
- * file JSONL output, log rotation, daemon mode, and MYTEAM_DEBUG env var.
+ * file JSONL output, log rotation, daemon mode, and RUNWRK_DEBUG env var.
  * Uses a temp directory for log files to avoid polluting the project.
  */
 
@@ -137,12 +137,12 @@ describe("getLogger", () => {
   });
 });
 
-// --- MYTEAM_DEBUG env var ---
+// --- RUNWRK_DEBUG env var ---
 
-describe("MYTEAM_DEBUG", () => {
-  it("sets level to debug when MYTEAM_DEBUG=1", async () => {
-    const original = process.env.MYTEAM_DEBUG;
-    process.env.MYTEAM_DEBUG = "1";
+describe("RUNWRK_DEBUG", () => {
+  it("sets level to debug when RUNWRK_DEBUG=1", async () => {
+    const original = process.env.RUNWRK_DEBUG;
+    process.env.RUNWRK_DEBUG = "1";
 
     try {
       const logFile = join(tempDir, "debug-env.log");
@@ -154,9 +154,9 @@ describe("MYTEAM_DEBUG", () => {
       expect(content).toContain("env debug message");
     } finally {
       if (original === undefined) {
-        delete process.env.MYTEAM_DEBUG;
+        delete process.env.RUNWRK_DEBUG;
       } else {
-        process.env.MYTEAM_DEBUG = original;
+        process.env.RUNWRK_DEBUG = original;
       }
     }
   });

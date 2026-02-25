@@ -9,7 +9,7 @@
  * older observations into period summaries (e.g., "Feb 10-17: focused on AI
  * threads, engagement improved 20%"). This keeps the file bounded.
  *
- * Storage: `.myteam/workflows/<name>/observations.json`
+ * Storage: `.runwrk/workflows/<name>/observations.json`
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";

@@ -1,8 +1,8 @@
 /**
- * consolidate-command.test.ts — Verifies the `myteam twitter consolidate` CLI command routing.
+ * consolidate-command.test.ts — Verifies the `runwrk twitter consolidate` CLI command routing.
  *
  * Tests that the consolidate subcommand is correctly registered under
- * `myteam twitter`, that its --help output describes consolidation and workflow,
+ * `runwrk twitter`, that its --help output describes consolidation and workflow,
  * and that the -w flag is shown as required.
  */
 
@@ -11,10 +11,10 @@ import { createTestProgram } from "../../helpers/program-factory";
 import { stripAnsi } from "../../helpers/strip";
 
 describe("CLI: twitter consolidate command", () => {
-  it("myteam twitter consolidate --help outputs help text containing 'consolidation' and 'workflow'", async () => {
+  it("runwrk twitter consolidate --help outputs help text containing 'consolidation' and 'workflow'", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "twitter", "consolidate", "--help"]);
+      await program.parseAsync(["node", "runwrk", "twitter", "consolidate", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);
@@ -25,10 +25,10 @@ describe("CLI: twitter consolidate command", () => {
     expect(helpText).toContain("workflow");
   });
 
-  it("myteam twitter consolidate --help shows the -w flag as required", async () => {
+  it("runwrk twitter consolidate --help shows the -w flag as required", async () => {
     const { program, output } = createTestProgram();
     try {
-      await program.parseAsync(["node", "myteam", "twitter", "consolidate", "--help"]);
+      await program.parseAsync(["node", "runwrk", "twitter", "consolidate", "--help"]);
     } catch (e: unknown) {
       const err = e as { exitCode: number };
       expect(err.exitCode).toBe(0);

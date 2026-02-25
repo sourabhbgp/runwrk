@@ -1,5 +1,5 @@
 /**
- * config.ts — Read/write Twitter engagement configuration from .myteam/twitter-config.json
+ * config.ts — Read/write Twitter engagement configuration from .runwrk/twitter-config.json
  *
  * Stores topics, keywords, watch accounts, and rate limits.
  * Falls back to sensible defaults if no config file exists.
@@ -11,7 +11,7 @@ import { join, dirname } from "path";
 import type { WorkflowConfig } from "./workflow.types";
 
 /** Get the config file path (lazy for testability with process.chdir) */
-function getConfigPath(): string { return join(process.cwd(), ".myteam", "twitter-config.json"); }
+function getConfigPath(): string { return join(process.cwd(), ".runwrk", "twitter-config.json"); }
 
 // --- Types ---
 
@@ -46,7 +46,7 @@ const DEFAULT_CONFIG: TwitterConfig = {
 
 // --- Persistence ---
 
-/** Ensure the .myteam/ directory exists before writing */
+/** Ensure the .runwrk/ directory exists before writing */
 function ensureDir() {
   const dir = dirname(getConfigPath());
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });

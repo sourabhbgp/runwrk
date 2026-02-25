@@ -1,4 +1,4 @@
-// Type definitions for the generic OS-level job scheduler
+// Type definitions for the generic OS-level job scheduler (runwrk)
 
 // --- Job Definition ---
 
@@ -6,7 +6,7 @@
 export interface ScheduledJob {
   /** Unique identifier (e.g. "growth-engage", "growth-consolidate") */
   name: string;
-  /** CLI command to run, without the `myteam` prefix (e.g. "twitter -w growth") */
+  /** CLI command to run, without the `runwrk` prefix (e.g. "twitter -w growth") */
   command: string;
   /** Cron expression (e.g. "0 9,14,20 * * *") — standard 5-field format */
   cron: string;

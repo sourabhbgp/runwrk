@@ -1,4 +1,4 @@
-// Job registry — CRUD operations on .myteam/scheduler/jobs.json
+// Job registry — CRUD operations on .runwrk/scheduler/jobs.json
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
@@ -8,7 +8,7 @@ import type { ScheduledJob } from "./types";
 
 /** Base directory for scheduler data */
 function schedulerDir(): string {
-  return join(process.cwd(), ".myteam", "scheduler");
+  return join(process.cwd(), ".runwrk", "scheduler");
 }
 
 /** Path to the jobs registry file */
@@ -23,7 +23,7 @@ function logsDir(): string {
 
 // --- Directory Setup ---
 
-/** Ensure .myteam/scheduler/ and logs/ directories exist */
+/** Ensure .runwrk/scheduler/ and logs/ directories exist */
 export function ensureSchedulerDir(): void {
   mkdirSync(logsDir(), { recursive: true });
 }

@@ -146,7 +146,7 @@ export async function workflowCreate(): Promise<void> {
 
   console.log();
   success(`Workflow "${name}" created (${TEMPLATES[template].label})`);
-  console.log(dim(`\nRun ${bold(`myteam twitter -w ${name}`)} to start a session.\n`));
+  console.log(dim(`\nRun ${bold(`runwrk twitter -w ${name}`)} to start a session.\n`));
 }
 
 // --- List Command ---
@@ -159,7 +159,7 @@ export async function workflowList(): Promise<void> {
   console.log(`\n${bold(cyan("Workflows"))}\n`);
 
   if (workflows.length === 0) {
-    info("No workflows yet. Run `myteam twitter workflow create` to get started.");
+    info("No workflows yet. Run `runwrk twitter workflow create` to get started.");
     console.log();
     return;
   }

@@ -41,7 +41,7 @@ describe("path helpers", () => {
   it("workflowDir returns a path containing the workflow name", () => {
     const dir = workflowDir("my-campaign");
     expect(dir).toContain("my-campaign");
-    expect(dir).toContain(".myteam/workflows/");
+    expect(dir).toContain(".runwrk/workflows/");
   });
 
   it("workflowConfigPath returns a path containing the workflow name and workflow.json", () => {

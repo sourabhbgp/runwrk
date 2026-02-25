@@ -5,11 +5,11 @@ src/
 ├── index.ts                  # CLI entry point (runs the Commander program)
 ├── cli/                      # Command registration (Commander.js)
 │   ├── index.ts              # Builds the program, imports all register.*.ts files
-│   ├── register.setup.ts     # `myteam setup` command
-│   ├── register.chat.ts      # `myteam chat` command
-│   ├── register.schedule.ts  # `myteam schedule` + subcommands (add, remove, list, enable, disable, logs)
-│   ├── register.daemon.ts    # `myteam daemon` command (starts in-process scheduler for Docker)
-│   └── register.twitter.ts   # `myteam twitter` + subcommands (setup, stats, feedback, workflow, consolidate)
+│   ├── register.setup.ts     # `runwrk setup` command
+│   ├── register.chat.ts      # `runwrk chat` command
+│   ├── register.schedule.ts  # `runwrk schedule` + subcommands (add, remove, list, enable, disable, logs)
+│   ├── register.daemon.ts    # `runwrk daemon` command (starts in-process scheduler for Docker)
+│   └── register.twitter.ts   # `runwrk twitter` + subcommands (setup, stats, feedback, workflow, consolidate)
 ├── common/                   # Shared utilities (no feature imports)
 │   ├── ui.ts                 # Terminal formatting (bold, dim, spinner, warn, etc.)
 │   ├── env.ts                # .env.local read/write helpers
@@ -89,7 +89,7 @@ tests/
 ├── setup.ts                    # Global setup (silences console via vi.spyOn)
 ├── helpers/
 │   ├── index.ts                # Barrel exports for all helpers
-│   ├── fixtures.ts             # createTestWorkspace() — temp dirs with .myteam/ structure
+│   ├── fixtures.ts             # createTestWorkspace() — temp dirs with .runwrk/ structure
 │   ├── mock-data.ts            # Factory functions with partial overrides (createMockFeedItem, createMockWorkflowConfig, etc.)
 │   ├── program-factory.ts      # createTestProgram() — Commander program with exitOverride + captured output
 │   └── strip.ts                # stripAnsi() helper
@@ -105,7 +105,7 @@ tests/
 - **Naming**: `<source-file>.test.ts` — mirrors the source file name (e.g. `memory.facts.ts` → `memory.facts.test.ts`).
 - **File header**: JSDoc block explaining what the test file covers and how it works.
 - **Section headers**: Use `// --- sectionName ---` comments to separate test groups within a file.
-- **Isolation**: Use `createTestWorkspace()` in `beforeEach`/`afterEach` for any test touching the filesystem. It creates a temp dir with `.myteam/workflows/` and cleans up after.
+- **Isolation**: Use `createTestWorkspace()` in `beforeEach`/`afterEach` for any test touching the filesystem. It creates a temp dir with `.runwrk/workflows/` and cleans up after.
 - **Fake timers**: Use `vi.useFakeTimers()` + `vi.setSystemTime()` for time-dependent logic. Always `vi.useRealTimers()` in `afterEach`.
 - **Factory functions**: Use `tests/helpers/mock-data.ts` factories with partial overrides — tests only specify fields they care about.
 - **CLI integration tests**: Use `createTestProgram()` from `tests/helpers/program-factory.ts` — it returns a Commander program with `exitOverride()` and captured stdout/stderr.

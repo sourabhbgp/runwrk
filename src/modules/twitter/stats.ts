@@ -1,5 +1,5 @@
 /**
- * stats.ts — Display engagement analytics (the `myteam twitter stats` command).
+ * stats.ts — Display engagement analytics (the `runwrk twitter stats` command).
  *
  * When a workflow is specified via --workflow, shows stats for that workflow only.
  * When no workflow is specified, shows a summary table across all workflows with totals.
@@ -107,7 +107,7 @@ function displayWorkflowStats(workflowName: string, mem: TwitterMemory): void {
   displayMemorySystemInfo(workflowName);
 
   if (totalDays === 0 && mem.repliedTo.length === 0) {
-    info(`No engagement data yet for "${workflowName}". Run \`myteam twitter -w ${workflowName}\` to start.`);
+    info(`No engagement data yet for "${workflowName}". Run \`runwrk twitter -w ${workflowName}\` to start.`);
   }
 }
 
@@ -163,7 +163,7 @@ export async function twitterStats(opts: { workflow?: string } = {}) {
   console.log(`\n${bold(cyan("Twitter Engagement Stats"))}\n`);
 
   if (workflows.length === 0) {
-    info("No workflows found. Run `myteam twitter workflow create` to get started.");
+    info("No workflows found. Run `runwrk twitter workflow create` to get started.");
     console.log();
     return;
   }
@@ -205,5 +205,5 @@ export async function twitterStats(opts: { workflow?: string } = {}) {
     );
   }
 
-  console.log(dim(`\nRun \`myteam twitter stats -w <name>\` for detailed per-workflow stats.\n`));
+  console.log(dim(`\nRun \`runwrk twitter stats -w <name>\` for detailed per-workflow stats.\n`));
 }
