@@ -24,12 +24,15 @@ let workspace: TestWorkspace;
 const originalPlatform = process.platform;
 
 beforeEach(() => {
+  // Stub the Bun global so vi.spyOn(Bun, "spawnSync") works in vitest's Node.js env
+  vi.stubGlobal("Bun", { spawnSync: vi.fn() });
   workspace = createTestWorkspace();
   ensureSchedulerDir();
 });
 
 afterEach(() => {
   Object.defineProperty(process, "platform", { value: originalPlatform });
+  vi.unstubAllGlobals();
   workspace.cleanup();
 });
 
