@@ -28,7 +28,7 @@ vi.mock("@/modules/twitter/memory", () => ({
   getBlockedAccounts: vi.fn(() => []),
 }));
 
-import { buildSystemPrompt } from "@/modules/twitter/prompt";
+import { buildSystemPrompt, buildActionGuidance } from "@/modules/twitter/prompt";
 import { createMockWorkflowConfig } from "../../helpers/mock-data";
 
 // Import mocked functions so we can override return values in specific tests
@@ -57,10 +57,15 @@ describe("buildSystemPrompt (no workflow)", () => {
     expect(prompt).toContain("natural, conversational tone");
   });
 
-  it("includes safety rules", () => {
+  it("includes safety rules with quality-and-quantity guidance", () => {
     const prompt = buildSystemPrompt();
     expect(prompt).toContain("Safety Rules");
     expect(prompt).toContain("NEVER spam");
+    // New phrasing encourages engagement over skipping
+    expect(prompt).toContain("quality AND quantity");
+    expect(prompt).toContain("always better than skipping");
+    // Old skip-encouraging phrasing should be gone
+    expect(prompt).not.toContain("better to skip than post a generic reply");
   });
 });
 
@@ -97,7 +102,7 @@ describe("buildSystemPrompt (with workflow)", () => {
     expect(prompt).toContain("Focus on engaging with senior engineers.");
   });
 
-  it("includes Action Preferences section when workflow has actionBias", () => {
+  it("includes Action Preferences with behavioral guidance when workflow has actionBias", () => {
     const workflow = createMockWorkflowConfig({
       actionBias: {
         reply: "heavy",
@@ -110,8 +115,11 @@ describe("buildSystemPrompt (with workflow)", () => {
 
     const prompt = buildSystemPrompt(workflow);
     expect(prompt).toContain("## Action Preferences");
-    expect(prompt).toContain("Replies: heavy");
-    expect(prompt).toContain("Likes: light");
+    // Should contain specific guidance, not just the label
+    expect(prompt).toContain("**Reply** (heavy)");
+    expect(prompt).toContain("60-70%");
+    expect(prompt).toContain("**Like** (light)");
+    expect(prompt).toContain("sparingly");
   });
 
   it("falls back to global config topics when workflow has empty topics", () => {
@@ -163,5 +171,95 @@ describe("buildSystemPrompt (memory interactions)", () => {
     const prompt = buildSystemPrompt();
     expect(prompt).toContain("@spammer42");
     expect(prompt).toContain("@scambot99");
+  });
+});
+
+// --- Reply Strategy Section ---
+
+describe("buildSystemPrompt (Reply Strategy)", () => {
+  beforeEach(() => {
+    mockGetWorkingMemoryBlock.mockReturnValue("No memory data yet.");
+    mockGetBlockedAccounts.mockReturnValue([]);
+  });
+
+  it("includes Reply Strategy section when reply bias is heavy", () => {
+    const workflow = createMockWorkflowConfig({
+      actionBias: {
+        reply: "heavy",
+        like: "moderate",
+        retweet: "light",
+        originalPost: "moderate",
+        follow: "moderate",
+      },
+    });
+
+    const prompt = buildSystemPrompt(workflow);
+    expect(prompt).toContain("## Reply Strategy");
+    expect(prompt).toContain("thoughtful questions");
+    expect(prompt).toContain("75x algorithm weight");
+    expect(prompt).toContain("NEVER start with");
+    expect(prompt).toContain("1-3 sentences");
+  });
+
+  it("does NOT include Reply Strategy section when reply bias is moderate", () => {
+    const workflow = createMockWorkflowConfig({
+      actionBias: {
+        reply: "moderate",
+        like: "moderate",
+        retweet: "moderate",
+        originalPost: "moderate",
+        follow: "moderate",
+      },
+    });
+
+    const prompt = buildSystemPrompt(workflow);
+    expect(prompt).not.toContain("## Reply Strategy");
+  });
+
+  it("does NOT include Reply Strategy section when reply bias is light", () => {
+    const workflow = createMockWorkflowConfig({
+      actionBias: {
+        reply: "light",
+        like: "moderate",
+        retweet: "moderate",
+        originalPost: "moderate",
+        follow: "moderate",
+      },
+    });
+
+    const prompt = buildSystemPrompt(workflow);
+    expect(prompt).not.toContain("## Reply Strategy");
+  });
+});
+
+// --- buildActionGuidance ---
+
+describe("buildActionGuidance", () => {
+  it("returns specific guidance for known action + level combinations", () => {
+    const result = buildActionGuidance("Reply", "heavy");
+    expect(result).toContain("**Reply** (heavy)");
+    expect(result).toContain("60-70%");
+  });
+
+  it("returns specific guidance for moderate level", () => {
+    const result = buildActionGuidance("Like", "moderate");
+    expect(result).toContain("**Like** (moderate)");
+    expect(result).toContain("genuinely interesting");
+  });
+
+  it("returns specific guidance for light level", () => {
+    const result = buildActionGuidance("Retweet", "light");
+    expect(result).toContain("**Retweet** (light)");
+    expect(result).toContain("Rarely retweet");
+  });
+
+  it("falls back to plain label for unknown action", () => {
+    const result = buildActionGuidance("UnknownAction", "heavy");
+    expect(result).toBe("- **UnknownAction**: heavy\n");
+  });
+
+  it("falls back to plain label for unknown level", () => {
+    const result = buildActionGuidance("Reply", "extreme");
+    expect(result).toBe("- **Reply**: extreme\n");
   });
 });

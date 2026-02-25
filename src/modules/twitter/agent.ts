@@ -26,6 +26,15 @@ export type Analysis = {
   draft?: string;
 };
 
+// --- Helpers ---
+
+/** Format a follower count into a human-readable compact form (e.g. 1,234 or 12.5K) */
+export function formatFollowerCount(count: number): string {
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
+  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`;
+  return count.toLocaleString();
+}
+
 // --- Client Setup ---
 
 /** Create an Anthropic client using the stored API key */
@@ -51,10 +60,14 @@ export async function analyzeTweet(
     ? item.thread.map((t) => `@${t.username}: ${t.text}`).join("\n")
     : "";
 
+  // Include follower count so Claude can make target-tier decisions
+  // (e.g. 70% mid-tier, 20% peers, 10% large accounts per strategy)
+  const followerLabel = formatFollowerCount(item.tweet.followers);
+
   const prompt = `Analyze this tweet and suggest an action.
 
 ${threadContext ? `## Thread Context\n${threadContext}\n\n` : ""}## Tweet
-@${item.tweet.username}: ${item.tweet.text}
+@${item.tweet.username} (${followerLabel} followers): ${item.tweet.text}
 [${item.tweet.likes} likes, ${item.tweet.retweets} RTs, ${item.tweet.replies} replies]
 Type: ${item.type}
 

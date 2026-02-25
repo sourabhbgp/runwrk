@@ -11,10 +11,10 @@ import type { WorkflowConfig, WorkflowTemplate } from "./workflow.types";
 // --- Default Limits (shared baseline for all templates) ---
 
 const DEFAULT_LIMITS: WorkflowConfig["limits"] = {
-  maxLikesPerSession: 10,
-  maxRepliesPerSession: 5,
-  maxPostsPerDay: 3,
-  delayBetweenActions: [2000, 5000],
+  maxLikesPerSession: 12,
+  maxRepliesPerSession: 17,
+  maxPostsPerDay: 5,
+  delayBetweenActions: [1500, 4000],
 };
 
 // --- Follower Growth Template ---
@@ -31,15 +31,16 @@ export function createFollowerGrowthWorkflow(
     description: "Grow follower count by engaging with high-visibility accounts",
     createdAt: new Date().toISOString(),
     strategyPrompt:
-      "Your primary goal is growing the account's follower count. " +
-      "Prioritize replying to tweets from high-follower accounts. " +
-      "Write insightful replies that make people curious about you. " +
-      "Bias toward replies over likes — replies create visibility, likes don't.",
+      "Your primary goal is growing the account's follower count through high-volume, high-quality replies. " +
+      "Replies carry 13.5-27x weight in Twitter's algorithm. If someone replies back, that's 75x weight. " +
+      "Target 70% mid-tier accounts (5K-100K followers), 20% similar-sized peers, 10% large accounts (100K+). " +
+      "Reply to 60-70% of tweets you see — your default is to engage, not skip. " +
+      "Always prefer reply or quote tweet over like.",
     topics: [],
     keywords: [],
     watchAccounts: [],
-    feedPriority: { mentions: 100, timeline: 40, discovery: 70 },
-    feedFilters: { minFollowers: 1000 },
+    feedPriority: { mentions: 100, timeline: 50, discovery: 80 },
+    feedFilters: { minFollowers: 0 },
     actionBias: {
       reply: "heavy",
       like: "moderate",

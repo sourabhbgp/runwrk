@@ -30,9 +30,26 @@ describe("createFollowerGrowthWorkflow", () => {
     expect(config.strategyPrompt.length).toBeGreaterThan(0);
   });
 
-  it("has feedFilters.minFollowers set (>0)", () => {
+  it("has feedFilters.minFollowers set to 0 (allows peer engagement)", () => {
     expect(config.feedFilters.minFollowers).toBeDefined();
-    expect(config.feedFilters.minFollowers).toBeGreaterThan(0);
+    expect(config.feedFilters.minFollowers).toBe(0);
+  });
+
+  it("has optimized session limits for high-volume engagement", () => {
+    expect(config.limits.maxRepliesPerSession).toBe(17);
+    expect(config.limits.maxLikesPerSession).toBe(12);
+    expect(config.limits.maxPostsPerDay).toBe(5);
+    expect(config.limits.delayBetweenActions).toEqual([1500, 4000]);
+  });
+
+  it("has strategy prompt referencing algorithm weights", () => {
+    expect(config.strategyPrompt).toContain("13.5-27x");
+    expect(config.strategyPrompt).toContain("75x");
+  });
+
+  it("has feedPriority.discovery of 80 and timeline of 50", () => {
+    expect(config.feedPriority.discovery).toBe(80);
+    expect(config.feedPriority.timeline).toBe(50);
   });
 
   it("has actionBias.reply set to 'heavy'", () => {

@@ -32,19 +32,27 @@ export async function runAuto(
   // Use workflow limits when available, otherwise global config limits
   const limits = workflow?.limits ?? config.limits;
 
-  const actions = { replies: 0, likes: 0, retweets: 0, skipped: 0 };
+  const actions = { replies: 0, quotes: 0, likes: 0, retweets: 0, skipped: 0 };
+  let processed = 0;
 
   for (const item of items) {
     // Skip tweets we've already engaged with in a previous session
     if (item.alreadyEngaged) continue;
 
-    // Stop if both reply and like limits are reached
+    // Stop if both reply+quote and like limits are reached
+    const totalReplies = actions.replies + actions.quotes;
     if (
-      actions.replies >= limits.maxRepliesPerSession &&
+      totalReplies >= limits.maxRepliesPerSession &&
       actions.likes >= limits.maxLikesPerSession
     ) {
-      info("Session limits reached. Stopping.");
+      info(`Session limits reached (${actions.replies} replies, ${actions.quotes} quotes, ${actions.likes} likes). Stopping.`);
       break;
+    }
+
+    // Progress logging every 5 processed items so user can see activity
+    processed++;
+    if (processed % 5 === 0) {
+      console.log(dim(`  [progress] ${processed} analyzed — ${actions.replies} replies, ${actions.quotes} quotes, ${actions.likes} likes, ${actions.skipped} skipped`));
     }
 
     // Fetch thread context for mentions so Claude has full conversation
@@ -105,7 +113,8 @@ export async function runAuto(
 
     // --- Handle Reply / Quote ---
     if (action === "reply" || action === "quote") {
-      if (actions.replies >= limits.maxRepliesPerSession) continue;
+      // Replies and quotes share the same session limit (both create tweets)
+      if (actions.replies + actions.quotes >= limits.maxRepliesPerSession) continue;
       // Skip if Claude didn't provide draft text
       if (!analysis.draft) {
         actions.skipped++;
@@ -121,14 +130,15 @@ export async function runAuto(
         if (action === "reply") {
           await postTweet(analysis.draft, { replyTo: item.tweet.id }, config);
           logReply(item.tweet.id, item.tweet.userId, item.tweet.username, analysis.draft, workflowName);
+          actions.replies++;
           success(`Replied to @${item.tweet.username}`);
         } else {
           await postTweet(analysis.draft, { quote: item.tweet.id }, config);
           logReply(item.tweet.id, item.tweet.userId, item.tweet.username, `[QT] ${analysis.draft}`, workflowName);
           incrementGlobalDailyPosts();
+          actions.quotes++;
           success(`Quoted @${item.tweet.username}`);
         }
-        actions.replies++;
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         error(`${action} failed: ${msg}`);

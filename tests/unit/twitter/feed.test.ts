@@ -18,6 +18,7 @@ import {
   normalizeTweet,
   isSpam,
   applyWorkflowFilters,
+  boostWatchAccounts,
   type FeedItem,
 } from "@/modules/twitter/feed";
 import { isBlocked } from "@/modules/twitter/memory";
@@ -303,5 +304,69 @@ describe("applyWorkflowFilters", () => {
     // Only alice: has #typescript AND 1000 followers (>= 500)
     expect(result).toHaveLength(1);
     expect(result[0].tweet.username).toBe("alice");
+  });
+});
+
+// --- boostWatchAccounts ---
+
+describe("boostWatchAccounts", () => {
+  it("boosts priority by 50 for tweets from watched accounts", () => {
+    const items = [
+      createMockFeedItem({ tweet: { username: "levelsio" }, priority: 20 }),
+      createMockFeedItem({ tweet: { username: "random_user" }, priority: 20 }),
+    ];
+
+    boostWatchAccounts(items, ["levelsio"]);
+
+    expect(items[0].priority).toBe(70); // 20 + 50
+    expect(items[1].priority).toBe(20); // unchanged
+  });
+
+  it("performs case-insensitive matching on usernames", () => {
+    const items = [
+      createMockFeedItem({ tweet: { username: "Karpathy" }, priority: 30 }),
+      createMockFeedItem({ tweet: { username: "SWYX" }, priority: 30 }),
+    ];
+
+    boostWatchAccounts(items, ["karpathy", "swyx"]);
+
+    expect(items[0].priority).toBe(80); // 30 + 50
+    expect(items[1].priority).toBe(80); // 30 + 50
+  });
+
+  it("does nothing when watchAccounts list is empty", () => {
+    const items = [
+      createMockFeedItem({ tweet: { username: "someone" }, priority: 40 }),
+    ];
+
+    boostWatchAccounts(items, []);
+
+    expect(items[0].priority).toBe(40); // unchanged
+  });
+
+  it("does nothing when no items match any watch account", () => {
+    const items = [
+      createMockFeedItem({ tweet: { username: "alice" }, priority: 25 }),
+      createMockFeedItem({ tweet: { username: "bob" }, priority: 25 }),
+    ];
+
+    boostWatchAccounts(items, ["levelsio", "swyx"]);
+
+    expect(items[0].priority).toBe(25);
+    expect(items[1].priority).toBe(25);
+  });
+
+  it("boosts multiple items from different watch accounts", () => {
+    const items = [
+      createMockFeedItem({ tweet: { username: "levelsio" }, priority: 10 }),
+      createMockFeedItem({ tweet: { username: "swyx" }, priority: 20 }),
+      createMockFeedItem({ tweet: { username: "random" }, priority: 30 }),
+    ];
+
+    boostWatchAccounts(items, ["levelsio", "swyx", "karpathy"]);
+
+    expect(items[0].priority).toBe(60); // 10 + 50
+    expect(items[1].priority).toBe(70); // 20 + 50
+    expect(items[2].priority).toBe(30); // unchanged
   });
 });

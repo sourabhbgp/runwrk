@@ -120,6 +120,21 @@ export function applyWorkflowFilters(items: FeedItem[], workflow?: WorkflowConfi
   });
 }
 
+// --- Watch Accounts Boost ---
+
+/** Boost priority by +50 for tweets authored by any of the workflow's watchAccounts.
+ *  Case-insensitive matching. Mutates items in-place for efficiency.
+ *  @internal Exported for unit testing only */
+export function boostWatchAccounts(items: FeedItem[], watchAccounts: string[]): void {
+  if (watchAccounts.length === 0) return;
+  const watchSet = new Set(watchAccounts.map((a) => a.toLowerCase()));
+  for (const item of items) {
+    if (watchSet.has(item.tweet.username.toLowerCase())) {
+      item.priority += 50;
+    }
+  }
+}
+
 // --- Feed Fetching ---
 
 /** Fetch mentions from notifications. Priority comes from workflow or defaults to 100. */
@@ -177,11 +192,13 @@ async function fetchDiscovery(
   workflowName?: string,
   basePriority: number = 20,
 ): Promise<FeedItem[]> {
-  const queries = [...keywords, ...topics].slice(0, 3);
+  // Use up to 5 queries for broader discovery (was 3)
+  const queries = [...keywords, ...topics].slice(0, 5);
   const items: FeedItem[] = [];
 
   for (const q of queries) {
-    const results = await searchTweets({ includeWords: [q] }, 10);
+    // Fetch 15 results per query for more coverage (was 10)
+    const results = await searchTweets({ includeWords: [q] }, 15);
     for (const raw of results) {
       const tweet = normalizeTweet(raw);
       if (!tweet) continue;
@@ -241,6 +258,11 @@ export async function fetchFeed(workflow?: WorkflowConfig, workflowName?: string
   const seenIds = new Set([...mentions, ...timeline].map((i) => i.tweet.id));
   const dedupedDiscovery = discovery.filter((i) => !seenIds.has(i.tweet.id));
   const items = [...mentions, ...timeline, ...dedupedDiscovery];
+
+  // Boost priority for tweets from watchAccounts — high-value engagement targets
+  if (workflow?.watchAccounts) {
+    boostWatchAccounts(items, workflow.watchAccounts);
+  }
 
   // Sort: unanswered tweets first, then by descending priority
   items.sort((a, b) => {

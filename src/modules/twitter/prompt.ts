@@ -13,6 +13,47 @@ import { readConfig } from "./config";
 import { getWorkingMemoryBlock, getBlockedAccounts } from "./memory";
 import type { WorkflowConfig } from "./workflow.types";
 
+// --- Action Guidance ---
+
+/** Map of action + bias level to concrete behavioral guidance for Claude.
+ *  Replaces vague "heavy"/"moderate"/"light" labels with explicit instructions. */
+const ACTION_GUIDANCE: Record<string, Record<string, string>> = {
+  Reply: {
+    heavy: "Reply to 60-70% of tweets you see. Your default should be to reply. Only skip if truly off-topic or controversial.",
+    moderate: "Reply when you have a genuine insight or question to add. Aim for ~30-40% of tweets.",
+    light: "Reply only when you have a uniquely valuable perspective. Be selective.",
+  },
+  Like: {
+    heavy: "Like most tweets you find relevant — use likes generously to signal engagement.",
+    moderate: "Like tweets you find genuinely interesting or to signal support without replying.",
+    light: "Like sparingly — only for standout content you strongly endorse.",
+  },
+  Retweet: {
+    heavy: "Retweet content that your audience would find valuable. Prefer quote tweets over plain retweets.",
+    moderate: "Occasionally retweet high-quality content. Always prefer quote tweet over plain retweet.",
+    light: "Rarely retweet. Always prefer quote tweet over plain retweet when you do.",
+  },
+  "Original post": {
+    heavy: "Proactively compose original tweets sharing insights, observations, or questions.",
+    moderate: "Post original tweets when inspiration strikes, but prioritize engagement over posting.",
+    light: "Rarely post original tweets — focus engagement energy on replies and conversations.",
+  },
+  Follow: {
+    heavy: "Follow accounts that engage back or share valuable content in your niche.",
+    moderate: "Follow accounts you've had good interactions with or want to build a relationship with.",
+    light: "Follow very selectively — only accounts you genuinely want to see in your timeline.",
+  },
+};
+
+/** Build a single line of behavioral guidance for an action at a given bias level */
+export function buildActionGuidance(action: string, level: string): string {
+  const guidance = ACTION_GUIDANCE[action]?.[level];
+  if (guidance) {
+    return `- **${action}** (${level}): ${guidance}\n`;
+  }
+  return `- **${action}**: ${level}\n`;
+}
+
 // --- System Prompt ---
 
 /** Build the system prompt that guides Claude's engagement behavior.
@@ -43,16 +84,28 @@ export function buildSystemPrompt(workflow?: WorkflowConfig, workflowName?: stri
   }
 
   // Build an "Action Preferences" section from the workflow's action bias
+  // Uses specific behavioral guidance per action per level instead of vague labels
   let actionPreferences = "";
   if (workflow?.actionBias) {
     const bias = workflow.actionBias;
     actionPreferences = `\n## Action Preferences\n`;
-    actionPreferences += `- Replies: ${bias.reply}\n`;
-    actionPreferences += `- Likes: ${bias.like}\n`;
-    actionPreferences += `- Retweets: ${bias.retweet}\n`;
-    actionPreferences += `- Original posts: ${bias.originalPost}\n`;
-    actionPreferences += `- Follows: ${bias.follow}\n`;
-    actionPreferences += `\n"Heavy" means strongly prefer this action. "Light" means use sparingly.`;
+    actionPreferences += buildActionGuidance("Reply", bias.reply);
+    actionPreferences += buildActionGuidance("Like", bias.like);
+    actionPreferences += buildActionGuidance("Retweet", bias.retweet);
+    actionPreferences += buildActionGuidance("Original post", bias.originalPost);
+    actionPreferences += buildActionGuidance("Follow", bias.follow);
+
+    // Add a Reply Strategy section when reply bias is heavy — gives Claude
+    // concrete techniques for writing high-quality replies at volume
+    if (bias.reply === "heavy") {
+      actionPreferences += `\n## Reply Strategy\n`;
+      actionPreferences += `- Ask thoughtful questions that invite a response back (replies back = 75x algorithm weight)\n`;
+      actionPreferences += `- Share a related experience or complementary perspective\n`;
+      actionPreferences += `- Add a specific insight the author might not have considered\n`;
+      actionPreferences += `- Keep replies 1-3 sentences — concise beats clever, genuine beats perfect\n`;
+      actionPreferences += `- NEVER start with "Great tweet!", "Love this!", or generic praise — add substance immediately\n`;
+      actionPreferences += `- Always prefer quote tweet over plain retweet — quote tweets create content, retweets don't\n`;
+    }
   }
 
   // Build blocked accounts section if any exist
@@ -77,7 +130,7 @@ ${actionPreferences}
 - NEVER be rude, dismissive, or argumentative
 - NEVER engage with controversial political/social topics
 - If a tweet is controversial, inflammatory, or you're unsure, recommend "skip"
-- Prioritize quality over quantity — it's better to skip than post a generic reply${blockedSection}
+- Aim for quality AND quantity — a good genuine reply is always better than skipping. Only skip if clearly off-topic, controversial, or you truly have nothing to add${blockedSection}
 
 ## Memory
 ${memoryBlock}
