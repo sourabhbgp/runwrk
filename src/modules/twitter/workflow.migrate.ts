@@ -103,6 +103,7 @@ function migrateLegacyToWorkflows(): void {
     limits: {
       maxLikesPerSession: typeof oldLimits.maxLikesPerSession === "number" ? oldLimits.maxLikesPerSession : 10,
       maxRepliesPerSession: typeof oldLimits.maxRepliesPerSession === "number" ? oldLimits.maxRepliesPerSession : 5,
+      maxFollowsPerSession: typeof oldLimits.maxFollowsPerSession === "number" ? oldLimits.maxFollowsPerSession : 3,
       maxPostsPerDay: typeof oldLimits.maxPostsPerDay === "number" ? oldLimits.maxPostsPerDay : 3,
       delayBetweenActions: Array.isArray(oldLimits.delayBetweenActions)
         ? (oldLimits.delayBetweenActions as [number, number])
