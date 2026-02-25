@@ -71,6 +71,7 @@ ${threadContext ? `## Thread Context\n${threadContext}\n\n` : ""}## Tweet
 [${item.tweet.likes} likes, ${item.tweet.retweets} RTs, ${item.tweet.replies} replies]
 Type: ${item.type}
 
+If you draft a reply or quote, write it in your voice — sarcastic, funny, friendly, simple. No AI-speak.
 Respond in this exact JSON format (no markdown, no code fences):
 {"action": "reply|like|quote|retweet|skip", "reason": "brief explanation", "draft": "reply text if action is reply or quote, omit otherwise"}`;
 
@@ -110,7 +111,8 @@ export async function craftReply(
 ${threadContext ? `## Thread Context\n${threadContext}\n\n` : ""}## Tweet
 @${item.tweet.username}: ${item.tweet.text}
 
-${userGuidance ? `## User Guidance\n${userGuidance}\n\n` : ""}Reply with ONLY the tweet text, nothing else. Keep it under 280 characters.`;
+${userGuidance ? `## User Guidance\n${userGuidance}\n\n` : ""}Reply with ONLY the tweet text, nothing else. Keep it under 280 characters.
+Be witty and human — sarcasm, humor, warmth. No generic praise, no AI filler.`;
 
   const response = await client.messages.create({
     model: "claude-sonnet-4-5-20250929",
@@ -142,7 +144,7 @@ export async function composeTweet(
   const prompt = `Compose an original tweet about: ${topicHint}
 
 Write ONLY the tweet text, nothing else. Keep it under 280 characters.
-Make it insightful, engaging, and authentic — not generic or overly promotional.`;
+Make it funny, sharp, and human — a hot take, a sarcastic observation, or a clever question. No corporate tone, no AI vibes.`;
 
   const response = await client.messages.create({
     model: "claude-sonnet-4-5-20250929",

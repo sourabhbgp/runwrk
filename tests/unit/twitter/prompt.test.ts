@@ -52,10 +52,12 @@ describe("buildSystemPrompt (no workflow)", () => {
     expect(prompt).toContain("typescript");
   });
 
-  it("includes voice/style guidelines", () => {
+  it("includes voice/style guidelines with personality traits", () => {
     const prompt = buildSystemPrompt();
     expect(prompt).toContain("Voice & Style");
-    expect(prompt).toContain("natural, conversational tone");
+    expect(prompt).toContain("sarcastic");
+    expect(prompt).toContain("funny");
+    expect(prompt).toContain("friendly");
   });
 
   it("includes safety rules with quality-and-quantity guidance", () => {
@@ -196,9 +198,9 @@ describe("buildSystemPrompt (Reply Strategy)", () => {
 
     const prompt = buildSystemPrompt(workflow);
     expect(prompt).toContain("## Reply Strategy");
-    expect(prompt).toContain("thoughtful questions");
+    expect(prompt).toContain("hot take");
     expect(prompt).toContain("75x algorithm weight");
-    expect(prompt).toContain("NEVER start with");
+    expect(prompt).toContain("generic praise");
     expect(prompt).toContain("1-3 sentences");
   });
 

@@ -36,7 +36,8 @@ export function createFollowerGrowthWorkflow(
       "Replies carry 13.5-27x weight in Twitter's algorithm. If someone replies back, that's 75x weight. " +
       "Target 70% mid-tier accounts (5K-100K followers), 20% similar-sized peers, 10% large accounts (100K+). " +
       "Reply to 60-70% of tweets you see — your default is to engage, not skip. " +
-      "Always prefer reply or quote tweet over like.",
+      "Always prefer reply or quote tweet over like. " +
+      "Be the account people remember — funny replies get follows, boring replies get ignored.",
     topics: [],
     keywords: [],
     watchAccounts: [],
@@ -74,9 +75,9 @@ export function createHashtagNicheWorkflow(
     createdAt: new Date().toISOString(),
     strategyPrompt:
       `Your goal is to become a recognized voice in ${hashtagStr}. ` +
-      "Every reply should demonstrate deep expertise. " +
+      "Every reply should demonstrate deep expertise — but make it fun, not lecture-y. " +
       "Post original insights using target hashtags. " +
-      "Engage authentically with others in the niche to build community presence.",
+      "Engage with others in the niche like you're the funniest person in the group chat.",
     topics: [],
     keywords: [],
     watchAccounts: [],
