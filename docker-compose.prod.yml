@@ -1,0 +1,23 @@
+services:
+  runwrk:
+    build: .
+    container_name: runwrk-daemon
+    restart: unless-stopped
+    volumes:
+      - /data/runwrk/data:/app/.runwrk
+    env_file:
+      - .env.local
+    environment:
+      - RUNWRK_DAEMON=1
+      - TZ=Asia/Kolkata
+    logging:
+      driver: "local"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "cat", "/app/.runwrk/daemon-health.json"]
+      interval: 120s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
