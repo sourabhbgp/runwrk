@@ -10,6 +10,7 @@ import { bold, dim, yellow, success, info, error, spinner, getLogger } from "../
 import { postTweet, likeTweet, retweet, followUser } from "./api";
 import { analyzeTweet } from "./agent";
 import { logReply, logLike, logRetweet, logSkip, logFollow, hasFollowed } from "./memory";
+import { getOrCreateRelationship } from "./memory.relationships";
 import { getGlobalDailyPostCount, incrementGlobalDailyPosts } from "./workflow";
 import type { FeedItem } from "./feed";
 import type { TwitterConfig } from "./config";
@@ -54,6 +55,45 @@ function shouldAutoFollow(
   return true;
 }
 
+// --- Reciprocity Gate ---
+
+/** Minimum one-sided interactions before we skip an account.
+ *  Gives smaller accounts a few chances to engage back. */
+const MIN_INTERACTIONS_TO_SKIP = 3;
+
+/** Accounts above this follower count are never skipped — replying to
+ *  high-profile accounts is a growth strategy (their followers see our reply),
+ *  and we never expect them to reply back personally. */
+const HIGH_PROFILE_FOLLOWER_THRESHOLD = 50_000;
+
+/** Check if we should skip an account due to negative reciprocity.
+ *  Returns true when we've engaged multiple times but they never responded,
+ *  saving LLM tokens on one-sided interactions. Exceptions:
+ *    - First encounters (no prior interactions) always pass through
+ *    - High-profile accounts (50K+ followers) are never skipped
+ *    - Accounts with < 3 interactions get a few chances first */
+function shouldSkipLowReciprocity(
+  username: string,
+  followers: number,
+  workflowName: string | undefined,
+): boolean {
+  // Legacy mode (no workflow) — no relationship data available
+  if (!workflowName) return false;
+
+  // High-profile accounts are never skipped — replying to them is a growth strategy
+  if (followers >= HIGH_PROFILE_FOLLOWER_THRESHOLD) return false;
+
+  const rel = getOrCreateRelationship(username, workflowName);
+
+  // Not enough interactions yet — give them a few chances
+  if (rel.interactions < MIN_INTERACTIONS_TO_SKIP) return false;
+
+  // We've engaged multiple times but they never responded — skip
+  if (rel.reciprocityScore < 0) return true;
+
+  return false;
+}
+
 /** Run the auto engagement loop — Claude decides and acts, limits enforced.
  *  When a workflow is provided, uses its limits and passes strategy to the agent.
  *  Iterates through all feed items, skipping already-engaged tweets,
@@ -77,6 +117,14 @@ export async function runAuto(
   for (const item of items) {
     // Skip tweets we've already engaged with in a previous session
     if (item.alreadyEngaged) continue;
+
+    // Skip accounts with negative reciprocity (never engage back).
+    // Mentions bypass this — if someone @mentions us, always respond.
+    if (item.type !== "mention" && shouldSkipLowReciprocity(item.tweet.username, item.tweet.followers, workflowName)) {
+      logSkip(item.tweet.username, item.tweet.text, "Negative reciprocity — account has not engaged back after previous interactions", workflowName);
+      actions.skipped++;
+      continue;
+    }
 
     // Stop if both reply+quote and like limits are reached
     const totalReplies = actions.replies + actions.quotes;
