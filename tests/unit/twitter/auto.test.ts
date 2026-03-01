@@ -39,6 +39,20 @@ vi.mock("@/modules/twitter/workflow", () => ({
   incrementGlobalDailyPosts: vi.fn(),
 }));
 
+vi.mock("@/modules/twitter/memory.relationships", () => ({
+  getOrCreateRelationship: vi.fn(() => ({
+    username: "unknown",
+    followStatus: "none",
+    warmth: "cold",
+    firstSeen: new Date().toISOString(),
+    lastInteraction: new Date().toISOString(),
+    interactions: 0,
+    topics: [],
+    notes: "",
+    reciprocityScore: 0,
+  })),
+}));
+
 vi.mock("@/modules/twitter/session", () => ({
   sessionSummary: vi.fn(),
 }));
@@ -50,7 +64,8 @@ vi.mock("@/modules/twitter/feed", () => ({
 import { runAuto } from "@/modules/twitter/auto";
 import { analyzeTweet } from "@/modules/twitter/agent";
 import { postTweet, followUser } from "@/modules/twitter/api";
-import { logFollow, hasFollowed } from "@/modules/twitter/memory";
+import { logFollow, hasFollowed, logSkip } from "@/modules/twitter/memory";
+import { getOrCreateRelationship } from "@/modules/twitter/memory.relationships";
 import { sessionSummary } from "@/modules/twitter/session";
 import { createMockFeedItem, createMockWorkflowConfig } from "../../helpers/mock-data";
 import type { TwitterConfig } from "@/modules/twitter/config";
@@ -59,7 +74,9 @@ const mockAnalyzeTweet = vi.mocked(analyzeTweet);
 const mockPostTweet = vi.mocked(postTweet);
 const mockFollowUser = vi.mocked(followUser);
 const mockLogFollow = vi.mocked(logFollow);
+const mockLogSkip = vi.mocked(logSkip);
 const mockHasFollowed = vi.mocked(hasFollowed);
+const mockGetOrCreateRelationship = vi.mocked(getOrCreateRelationship);
 const mockSessionSummary = vi.mocked(sessionSummary);
 
 // Minimal config satisfying the type requirement
@@ -76,16 +93,32 @@ const mockConfig: TwitterConfig = {
   },
 };
 
+/** Default relationship returned by the mock — first encounter, passes through */
+const DEFAULT_RELATIONSHIP = {
+  username: "unknown",
+  followStatus: "none" as const,
+  warmth: "cold" as const,
+  firstSeen: new Date().toISOString(),
+  lastInteraction: new Date().toISOString(),
+  interactions: 0,
+  topics: [],
+  notes: "",
+  reciprocityScore: 0,
+};
+
 beforeEach(() => {
   mockAnalyzeTweet.mockReset();
   mockPostTweet.mockReset();
   mockFollowUser.mockReset();
   mockLogFollow.mockReset();
+  mockLogSkip.mockReset();
   mockHasFollowed.mockReset();
+  mockGetOrCreateRelationship.mockReset();
   mockSessionSummary.mockReset();
   mockPostTweet.mockResolvedValue("tweet-id-123");
   mockFollowUser.mockResolvedValue(undefined);
   mockHasFollowed.mockReturnValue(false);
+  mockGetOrCreateRelationship.mockReturnValue({ ...DEFAULT_RELATIONSHIP });
   // Silence console output during tests
   vi.spyOn(console, "log").mockImplementation(() => {});
 });
@@ -343,5 +376,134 @@ describe("runAuto auto-follow", () => {
         follows: 1,
       }),
     );
+  });
+});
+
+// --- Reciprocity Gate ---
+
+describe("runAuto reciprocity gate", () => {
+  it("skips accounts with negative reciprocity after 3+ interactions", async () => {
+    mockGetOrCreateRelationship.mockReturnValue({
+      ...DEFAULT_RELATIONSHIP,
+      username: "coldacct",
+      interactions: 5,
+      reciprocityScore: -0.5,
+    });
+
+    const items = [
+      createMockFeedItem({ tweet: { id: "t1", username: "coldacct", followers: 1000 } }),
+    ];
+
+    const workflow = createMockWorkflowConfig();
+    await runAuto(items, mockConfig, workflow, "test-wf");
+
+    // Should not reach Claude analysis — skipped pre-LLM
+    expect(mockAnalyzeTweet).not.toHaveBeenCalled();
+    expect(mockLogSkip).toHaveBeenCalledWith(
+      "coldacct",
+      expect.any(String),
+      expect.stringContaining("Negative reciprocity"),
+      "test-wf",
+    );
+  });
+
+  it("allows first encounters through (interactions === 0)", async () => {
+    mockGetOrCreateRelationship.mockReturnValue({
+      ...DEFAULT_RELATIONSHIP,
+      username: "newacct",
+      interactions: 0,
+      reciprocityScore: 0,
+    });
+    mockAnalyzeTweet.mockResolvedValueOnce({ action: "skip", reason: "test" });
+
+    const items = [
+      createMockFeedItem({ tweet: { id: "t1", username: "newacct", followers: 1000 } }),
+    ];
+
+    const workflow = createMockWorkflowConfig();
+    await runAuto(items, mockConfig, workflow, "test-wf");
+
+    // First encounter — should reach Claude
+    expect(mockAnalyzeTweet).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows accounts with fewer than 3 interactions through even if negative", async () => {
+    mockGetOrCreateRelationship.mockReturnValue({
+      ...DEFAULT_RELATIONSHIP,
+      username: "fewinteractions",
+      interactions: 2,
+      reciprocityScore: -0.2,
+    });
+    mockAnalyzeTweet.mockResolvedValueOnce({ action: "skip", reason: "test" });
+
+    const items = [
+      createMockFeedItem({ tweet: { id: "t1", username: "fewinteractions", followers: 1000 } }),
+    ];
+
+    const workflow = createMockWorkflowConfig();
+    await runAuto(items, mockConfig, workflow, "test-wf");
+
+    // Under 3 interactions — should still reach Claude
+    expect(mockAnalyzeTweet).toHaveBeenCalledTimes(1);
+  });
+
+  it("never skips high-profile accounts (50K+ followers) regardless of reciprocity", async () => {
+    mockGetOrCreateRelationship.mockReturnValue({
+      ...DEFAULT_RELATIONSHIP,
+      username: "famous",
+      interactions: 10,
+      reciprocityScore: -1.0,
+    });
+    mockAnalyzeTweet.mockResolvedValueOnce({ action: "skip", reason: "test" });
+
+    const items = [
+      createMockFeedItem({ tweet: { id: "t1", username: "famous", followers: 75000 } }),
+    ];
+
+    const workflow = createMockWorkflowConfig();
+    await runAuto(items, mockConfig, workflow, "test-wf");
+
+    // 50K+ followers — always reaches Claude
+    expect(mockAnalyzeTweet).toHaveBeenCalledTimes(1);
+  });
+
+  it("never skips mentions even with negative reciprocity", async () => {
+    mockGetOrCreateRelationship.mockReturnValue({
+      ...DEFAULT_RELATIONSHIP,
+      username: "mentioner",
+      interactions: 10,
+      reciprocityScore: -1.0,
+    });
+    mockAnalyzeTweet.mockResolvedValueOnce({ action: "skip", reason: "test" });
+
+    const items = [
+      createMockFeedItem({ tweet: { id: "t1", username: "mentioner", followers: 500 }, type: "mention" }),
+    ];
+
+    const workflow = createMockWorkflowConfig();
+    await runAuto(items, mockConfig, workflow, "test-wf");
+
+    // Mentions always reach Claude regardless of reciprocity
+    expect(mockAnalyzeTweet).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows accounts with positive reciprocity through", async () => {
+    mockGetOrCreateRelationship.mockReturnValue({
+      ...DEFAULT_RELATIONSHIP,
+      username: "goodacct",
+      interactions: 5,
+      reciprocityScore: 0.3,
+    });
+    mockAnalyzeTweet.mockResolvedValueOnce({ action: "skip", reason: "test" });
+
+    const items = [
+      createMockFeedItem({ tweet: { id: "t1", username: "goodacct", followers: 1000 } }),
+    ];
+
+    const workflow = createMockWorkflowConfig();
+    await runAuto(items, mockConfig, workflow, "test-wf");
+
+    // Positive reciprocity — should reach Claude
+    expect(mockAnalyzeTweet).toHaveBeenCalledTimes(1);
   });
 });
