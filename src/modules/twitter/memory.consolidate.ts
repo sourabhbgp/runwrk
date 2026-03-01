@@ -41,6 +41,18 @@ const MIN_ACTION_AGE_HOURS = 12;
 /** Gap in minutes that defines a session boundary when grouping actions */
 const SESSION_GAP_MINUTES = 30;
 
+// --- Helpers ---
+
+/** Strip markdown code fences (```json ... ```) that Claude sometimes wraps around JSON responses. */
+function stripCodeFences(text: string): string {
+  const trimmed = text.trim();
+  if (trimmed.startsWith("```")) {
+    // Remove opening fence (```json or ```) and closing fence (```)
+    return trimmed.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
+  }
+  return trimmed;
+}
+
 // --- Session Grouping ---
 
 /** Group a flat list of actions into logical sessions based on time gaps.
@@ -224,7 +236,7 @@ export async function runConsolidation(
 
   let result: ConsolidationResult;
   try {
-    result = JSON.parse(responseText.trim());
+    result = JSON.parse(stripCodeFences(responseText));
   } catch (e: unknown) {
     logError("Failed to parse consolidation response. Skipping this run.");
     log.warn({ err: e, responseText: responseText.slice(0, 200) }, "Consolidation parse failed");
@@ -386,7 +398,7 @@ async function runConsolidationNoAgeFilter(
 
   let result: ConsolidationResult;
   try {
-    result = JSON.parse(responseText.trim());
+    result = JSON.parse(stripCodeFences(responseText));
   } catch (e: unknown) {
     getLogger().child({ component: "twitter", workflow: workflowName })
       .warn({ err: e, responseText: responseText.slice(0, 200) }, "Consolidation parse failed (manual)");
