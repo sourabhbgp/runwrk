@@ -5,6 +5,8 @@ export function registerTwitterCommand(program: Command): void {
   const twitter = program
     .command("twitter")
     .description("Twitter engagement tools")
+    .enablePositionalOptions()
+    .passThroughOptions()
     .option("--manual", "Run in interactive mode (default: auto)", false)
     .option("-w, --workflow <name>", "Workflow to run")
     .action(async (opts: { manual: boolean; workflow?: string }) => {

@@ -108,7 +108,8 @@ function getHelpText(): string {
 export function buildProgram(): Command {
   const program = new Command("runwrk")
     .version("1.0.0")
-    .description("AI marketing team for developers");
+    .description("AI marketing team for developers")
+    .enablePositionalOptions();
 
   // Style all --help output: custom root help + colored subcommand help
   program.configureHelp({

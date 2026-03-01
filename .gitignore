@@ -38,6 +38,7 @@ docs
 
 # runwrk runtime data
 .runwrk
+.runwrk-vps-backup
 
 # SQLite database
 *.db
